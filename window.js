@@ -1,3 +1,8 @@
+
+function toArray(nodeList) {
+  return Array.prototype.slice.call(nodeList);
+}
+
 var dirtMonitor = (function() {
   var isDirty = false;
   var titlebar = document.querySelector('.titlebar');
@@ -19,6 +24,73 @@ var dirtMonitor = (function() {
     setClean: setClean
   };
 })();
+
+// TODO(wdm) Check that SEPERATOR does not appear in notes.
+var SEPERATOR = '\n[//]: # (NVC: Do not edit this line)\n\n';
+
+var notes = [];
+
+var selected = null;
+
+function setSelected(i) {
+  if (typeof selected === "number") {
+    notes[selected] = parseNote(textarea.value);
+    var listItem = document.querySelector('#noteList ul').children[selected];
+    fillListItem(listItem, notes[selected]);
+    listItem.classList.remove('selected');
+  }
+  selected = i;
+  document.querySelector('#noteList ul')
+      .children[selected]
+      .classList.add('selected');
+  updateTextArea(notes[i].text);
+}
+
+function parseDB(rawText) {
+  var rawNotes = rawText.split(SEPERATOR);
+  notes = rawNotes.map(parseNote);
+  updateNoteList();
+  setSelected(0);
+}
+
+function parseNote(rawNote) {
+  var firstLine = rawNote.indexOf('\n');
+  return {
+    title: rawNote.substring(0, firstLine),
+    summary: rawNote.substring(firstLine + 1, 50),
+    text: rawNote
+  };
+}
+
+
+// TODO(wdm) Better name!
+function notesAsBlob() {
+  if (typeof selected === "number") {
+    notes[selected] = parseNote(textarea.value);
+  }
+  var texts = notes.map(function(note) { return note.text; });
+  var rawText = texts.join(SEPERATOR);
+  return new Blob([rawText], {
+    type:
+      'text/plain'
+  });
+}
+
+function fillListItem(li, note) {
+  li.children[0].textContent = note.title;
+  li.children[1].textContent = note.summary;
+}
+
+function updateNoteList() {
+  var ul = document.createElement('ul');
+  notes.forEach(function(note) {
+    var li = document.createElement('li');
+    li.innerHTML = '<span></span><i></i>';
+    fillListItem(li, note);
+    ul.appendChild(li);
+  });
+  document.querySelector('#noteList').appendChild(ul);
+}
 
 function updateTextArea(text) {
   textarea.value = text;
@@ -42,7 +114,7 @@ function save(callback) {
     callback();
     return;
   }
-  var blob = new Blob([textarea.value], {type: 'text/plain'});
+  var blob = notesAsBlob();
   var wrappedCallback = function() {
     // TODO(wdm) IMPORTANT! error handling.
     console.log('done');
@@ -87,10 +159,26 @@ function onKeydown(e) {
   }
 }
 
+function onClickList(e) {
+  console.log(e);
+  var target = e.target;
+  // This is a nasty hack to move clicks on the <i> tags up to their <li>.
+  if (target.parentNode.nodeName == 'LI') {
+    target = target.parentNode;
+  }
+  if (target.nodeName !== 'LI') {
+    return;
+  }
+  var list = toArray(document.querySelector('#noteList ul').children);
+  var i = list.indexOf(target);
+  setSelected(i);
+}
+
 function init() {
   restoreChosenFile();
   window.addEventListener('keydown', onKeydown);
   textarea.addEventListener('input', dirtMonitor.setDirty);
+  document.querySelector('#noteList').addEventListener('click', onClickList);
 }
 
 init();

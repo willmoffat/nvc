@@ -1,4 +1,4 @@
-html,body,textarea,div { margin:0; padding:0; border:0; outline:0; }
+html,body,textarea,div,ul,li { margin:0; padding:0; border:0; outline:0; }
 html,body { height: 100%;}
 
 body {
@@ -26,6 +26,7 @@ button {
 .container {
     flex: 1 1 auto;
     display: flex;
+    flex-direction: column;
 }
 
 textarea {
@@ -33,3 +34,31 @@ textarea {
     padding: 5px;
     resize: none;
 }
+
+
+/* Note list */
+ul {
+    list-style: none;
+    padding: 5px;
+    border: thin solid gray;
+}
+
+li {
+    padding-left: 5px;
+    margin: 4px;
+}
+
+li:hover,.selected {
+    background-color: lightBlue;
+}
+
+i::before {
+    content: '\2014';
+    padding-left: 0.4em;
+    padding-right: 0.1em;
+}
+i {
+    color: #aaa;
+    font-style: normal;
+}
+

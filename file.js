@@ -46,7 +46,7 @@ function onChooseFile(e) {
 // for files, read the text content into the textarea
 function loadFileEntry(_chosenEntry) {
   chosenEntry = _chosenEntry;
-  chosenEntry.file(function(file) { readAsText(chosenEntry, updateTextArea); });
+  chosenEntry.file(function(file) { readAsText(chosenEntry, parseDB); });
 }
 
 function restoreChosenFile() {
