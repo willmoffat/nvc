@@ -59,20 +59,28 @@ function doClose() {
   save(function() { window.close(); });
 }
 
-var W_CODE = 'W'.charCodeAt(0);
-var S_CODE = 'S'.charCodeAt(0);
-var ESCAPE_CODE = 27;
+
+var CODE_W = 'W'.charCodeAt(0);
+var CODE_S = 'S'.charCodeAt(0);
+var CODE_1 = '1'.charCodeAt(0);
+var CODE_ESC = 27;
 
 function onKeydown(e) {
-  if (e.keyCode === ESCAPE_CODE) {
+  if (e.keyCode === CODE_ESC) {
     e.preventDefault();
     doClose();
   }
-  if (e.ctrlKey) {
-    if (e.keyCode === W_CODE) {
+  if (e.altKey) {
+    if (e.keyCode === CODE_1) {
       e.preventDefault();
       doClose();
-    } else if (e.keyCode === S_CODE) {
+    }
+  }
+  if (e.ctrlKey) {
+    if (e.keyCode === CODE_W) {
+      e.preventDefault();
+      doClose();
+    } else if (e.keyCode === CODE_S) {
       e.preventDefault();
       save();
     }
