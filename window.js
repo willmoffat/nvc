@@ -1,19 +1,41 @@
 // UI code.
 "use strict";
 
-
 function s(s) {
-  return document.querySelector(s);
-}
-var resizeEl = s('#noteList');
-
-function handleMove(e) {
-  var h = e.clientY - resizeEl.offsetTop - 4;
-  resizeEl.style.height = h + 'px';
+  var el = document.querySelector(s);
+  if (!el) {
+    throw new Error("Could not find " + s);
+  }
+  return el;
 }
 
+var textarea = s('textarea');
+var errlog = s('#errlog');
 
-function resizeInit() {
+function toArray(nodeList) {
+  return Array.prototype.slice.call(nodeList);
+}
+
+function showError(err) {
+  console.error(err, err.stack);
+  if (!errlog.textContent) {
+    errlog.textContent = 'Error: ';
+  }
+  errlog.textContent += err + '\n';
+}
+
+///////////////
+// Resizable //
+///////////////
+
+(function() {
+  var resizeEl = s('#noteList');
+
+  function handleMove(e) {
+    var w = e.clientX - resizeEl.offsetLeft - 4;
+    resizeEl.style.width = w + 'px';
+  }
+
   s('#dragbar')
       .addEventListener('mousedown', function(e) {
         document.body.classList.add('resizing');
@@ -25,23 +47,8 @@ function resizeInit() {
     document.body.classList.remove('resizing');
     document.removeEventListener('mousemove', handleMove);
   });
-}
+})();
 
-resizeInit();
-
-
-
-var textarea = document.querySelector('textarea');
-var errlog = document.querySelector('#errlog');
-
-function toArray(nodeList) {
-  return Array.prototype.slice.call(nodeList);
-}
-
-function showError(err) {
-  console.error(err, err.stack);
-  errlog.textContent += err + '\n';
-}
 
 ///////////
 // Dirty //
@@ -49,7 +56,7 @@ function showError(err) {
 
 var dirtMonitor = (function() {
   var isDirty = false;
-  var titlebar = document.querySelector('.titlebar');
+  var titlebar = s('.titlebar');
   var setDirty = function() {
     if (!isDirty) {
       isDirty = true;
@@ -88,10 +95,13 @@ var highlight = (function() {
   }
 
   function highlight(terms, text) {
-    var regexStr = terms.map(escapeRegExp).join('|');
-    var regex = new RegExp(regexStr, 'gi');
     text = safeHtml(text);
-    return text.replace(regex, '<b>$&</b>');
+    if (terms.length) {
+      var regexStr = terms.map(escapeRegExp).join('|');
+      var regex = new RegExp(regexStr, 'gi');
+      text = text.replace(regex, '<q>$&</q>');
+    }
+    return text;
   }
   return highlight;
 })();
@@ -126,10 +136,10 @@ var search = (function() {
     updateTextArea(model.getNote(selected));
   }
 
-  var noteListEl = document.querySelector('#noteList');
+  var noteListEl = s('#noteList');
 
-  function displayAll() {
-    var terms = [];
+  function displayAll(opt_terms) {
+    var terms = opt_terms || [];
     // TODO(wdm) What order?
     var html = model.getNotes().map(function(note) {
       return displayNote(terms, note);
@@ -137,16 +147,20 @@ var search = (function() {
     noteList.innerHTML = html;
   }
 
+
+  // TODO(wdm) modify summary to show highlighted terms?
   function displayNote(terms, note) {
-    return '<li data-id="' + note.id + '"><span>' +
-           highlight(terms, note.title) + '</span><i>' +
-           highlight(terms, note.summary) + '</i></span></li>';
-    // TODO(wdm) modify summary to show highlighted terms?
+    var ID = note.id;
+    var TITLE = highlight(terms, note.title);
+    var SUMMARY = highlight(terms, note.summary);
+    var html = '<li data-id="' + ID + '"><b>' + TITLE + '</b><i>' + SUMMARY +
+               '</i></li>';
+    return html;
   }
 
   function displayMatches(terms, results) {
     if (!results || !results.length) {
-      displayAll();
+      displayAll(terms);
       return;
     }
     // Ordered by result score.
@@ -159,7 +173,7 @@ var search = (function() {
   }
 
   // TOOD(wdm) Do something with score?
-  var inputEl = document.querySelector('#search');
+  var inputEl = s('#search');
   function onInput(e) {
     var q = inputEl.value;
     if (!q.length) {
@@ -240,7 +254,7 @@ var DB = (function() {
     return {
       id: i,
       title: rawNote.substring(0, firstLine),
-      summary: rawNote.substring(firstLine + 1, 50),
+      summary: rawNote.substring(firstLine + 1, 150),
       text: rawNote
     };
   }
@@ -296,7 +310,7 @@ function onChooseFile() {
 
 function showFilename(fileEntry_) {
   fileEntry = fileEntry_;
-  document.querySelector('#filename').textContent = fileEntry.name;
+  s('#filename').textContent = fileEntry.name;
   return fileEntry;
 }
 
@@ -364,9 +378,9 @@ function init() {
 
   window.addEventListener('keydown', onKeydown);
   textarea.addEventListener('input', dirtMonitor.setDirty);
-  document.querySelector('#chooseFile').addEventListener('click', onChooseFile);
-  document.querySelector('#noteList').addEventListener('click', search.click);
-  document.querySelector('#search').addEventListener('input', search.onInput);
+  s('#chooseFile').addEventListener('click', onChooseFile);
+  s('#noteList').addEventListener('click', search.click);
+  s('#search').addEventListener('input', search.onInput);
 }
 
 init();

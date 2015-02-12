@@ -10,14 +10,16 @@
       <span class="dirtyIndicator"></span>
     </div>
 
-    <div class="container">
-      <input id="search" type="search" autofocus placeholder="search or create new note...">
+    <input id="search" type="search" autofocus
+	   placeholder="search or create new note...">
+
+    <div id="container">
       <ul id="noteList" class="panel"></ul>
-       <div id="dragbar"><div class="indicator"></div></div>
+      <div id="dragbar"><div class="indicator"></div></div>
       <textarea class="panel panel-flex" placeholder="Your notes go here..."></textarea>
-      <pre id="errlog"></pre>
     </div>
-    
+
+    <pre id="errlog"></pre>
     <button id="chooseFile">Choose File</button>
 
     <script src="vendor/lunr.min.js"></script>
