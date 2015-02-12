@@ -55,16 +55,58 @@ function setSelected(i) {
   updateTextArea(notes[i].text);
 }
 
+////////////
+// Search //
+////////////
+
+var index;
+var listItems;
+
+function createIndex() {
+  index = lunr(function() {
+    this.field('title', {boost: 10});
+    this.field('text');
+    this.ref('id');
+  });
+  notes.forEach(function(n) { index.add(n); });
+}
+
+function showAll() {
+  listItems.forEach(function(item) { item.style.display = ''; });
+}
+
+function hideAll() {
+  listItems.forEach(function(item) { item.style.display = 'none'; });
+}
+
+function onSearch(e) {
+  var q = e.target.value;
+  if (!q.length) {
+    showAll();
+    return;
+  }
+
+  var results = index.search(q);
+  hideAll();
+  results.forEach(function(r) {
+    var i = parseInt(r.ref, 10);
+    listItems[i].style.display = '';
+  });
+  // TOOD(wdm) Something with score?
+}
+
 function parseDB(rawText) {
   var rawNotes = rawText.split(SEPERATOR);
   notes = rawNotes.map(parseNote);
   updateNoteList();
   setSelected(0);
+  createIndex();
 }
 
-function parseNote(rawNote) {
+function parseNote(rawNote, i) {
   var firstLine = rawNote.indexOf('\n');
   return {
+    id: i,
     title: rawNote.substring(0, firstLine),
     summary: rawNote.substring(firstLine + 1, 50),
     text: rawNote
@@ -91,22 +133,24 @@ function fillListItem(li, note) {
 }
 
 function updateNoteList() {
+  listItems = [];
   var ul = document.createElement('ul');
   notes.forEach(function(note) {
     var li = document.createElement('li');
     li.innerHTML = '<span></span><i></i>';
     fillListItem(li, note);
     ul.appendChild(li);
+    listItems.push(li);
   });
   document.querySelector('#noteList').appendChild(ul);
 }
 
 function updateTextArea(text) {
   textarea.value = text;
-  textarea.focus();
+  // textarea.focus();
   // TODO(wdm) Restore actual previous position.
-  textarea.setSelectionRange(0, 0);
-  textarea.scrollTop = 0;
+  // textarea.setSelectionRange(0, 0);
+  // textarea.scrollTop = 0;
 }
 
 function setCaret(elem, pos) {
@@ -206,8 +250,8 @@ function init() {
   window.addEventListener('keydown', onKeydown);
   textarea.addEventListener('input', dirtMonitor.setDirty);
   document.querySelector('#noteList').addEventListener('click', onClickList);
-  document.querySelector('#choose_file')
-      .addEventListener('click', onChooseFile);
+  document.querySelector('#chooseFile').addEventListener('click', onChooseFile);
+  document.querySelector('#search').addEventListener('input', onSearch);
 }
 
 init();
