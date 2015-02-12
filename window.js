@@ -1,6 +1,36 @@
 // UI code.
 "use strict";
 
+
+function s(s) {
+  return document.querySelector(s);
+}
+var resizeEl = s('#noteList');
+
+function handleMove(e) {
+  var h = e.clientY - resizeEl.offsetTop - 4;
+  resizeEl.style.height = h + 'px';
+}
+
+
+function resizeInit() {
+  s('#dragbar')
+      .addEventListener('mousedown', function(e) {
+        document.body.classList.add('resizing');
+        e.preventDefault();
+        document.addEventListener('mousemove', handleMove);
+      });
+
+  document.addEventListener('mouseup', function(e) {
+    document.body.classList.remove('resizing');
+    document.removeEventListener('mousemove', handleMove);
+  });
+}
+
+resizeInit();
+
+
+
 var textarea = document.querySelector('textarea');
 var errlog = document.querySelector('#errlog');
 
@@ -45,10 +75,30 @@ var dirtMonitor = (function() {
 // Search //
 ////////////
 
+var highlight = (function() {
+  var div = document.createElement('div');
+
+  function safeHtml(text) {
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function escapeRegExp(str) {
+    return str.replace(/[.^$*+?()[{\\|\]-]/g, '\\$&');
+  }
+
+  function highlight(terms, text) {
+    var regexStr = terms.map(escapeRegExp).join('|');
+    var regex = new RegExp(regexStr, 'gi');
+    text = safeHtml(text);
+    return text.replace(regex, '<b>$&</b>');
+  }
+  return highlight;
+})();
+
 var search = (function() {
 
   var index;
-  var listItems;
   var selected = null;
 
   function createIndex(notes) {
@@ -68,89 +118,84 @@ var search = (function() {
       // Store any edits before switching note.
       var updatedNote = DB.parseNote(textarea.value);
       model.setNote(selected, updatedNote);
-      var listItem = document.querySelector('#noteList ul').children[selected];
-      fillListItem(listItem, updatedNote);
-      listItem.classList.remove('selected');
+      // HACK: update list item.
     }
     selected = i;
-    var listItem = document.querySelector('#noteList ul').children[selected];
-    if (!listItem) {
-      console.warn('selected invalid', selected);
-      return;
-    }
-    listItem.classList.add('selected');
+    // HACK: show selection.
     // Set textarea to current note.
     updateTextArea(model.getNote(selected));
   }
 
-  function showAll() {
-    listItems.forEach(function(item) { item.style.display = ''; });
+  var noteListEl = document.querySelector('#noteList');
+
+  function displayAll() {
+    var terms = [];
+    // TODO(wdm) What order?
+    var html = model.getNotes().map(function(note) {
+      return displayNote(terms, note);
+    }).join('\n');
+    noteList.innerHTML = html;
   }
 
-  function hideAll() {
-    listItems.forEach(function(item) { item.style.display = 'none'; });
+  function displayNote(terms, note) {
+    return '<li data-id="' + note.id + '"><span>' +
+           highlight(terms, note.title) + '</span><i>' +
+           highlight(terms, note.summary) + '</i></span></li>';
+    // TODO(wdm) modify summary to show highlighted terms?
   }
 
+  function displayMatches(terms, results) {
+    if (!results || !results.length) {
+      displayAll();
+      return;
+    }
+    // Ordered by result score.
+    var html = results.map(function(r) {
+      var id = parseInt(r.ref, 10);
+      var note = model.getNote(id);
+      return displayNote(terms, note);
+    }).join('\n');
+    noteList.innerHTML = html;
+  }
+
+  // TOOD(wdm) Do something with score?
+  var inputEl = document.querySelector('#search');
   function onInput(e) {
-    var q = e.target.value;
+    var q = inputEl.value;
     if (!q.length) {
-      showAll();
+      displayAll();
       return;
     }
 
     var results = index.search(q);
-    hideAll();
-    results.forEach(function(r) {
-      var i = parseInt(r.ref, 10);
-      listItems[i].style.display = '';
-    });
-    // TOOD(wdm) Something with score?
+    var terms = q.split(/\s+/);
+    displayMatches(terms, results);
   }
 
-  function fillListItem(li, note) {
-    li.children[0].textContent = note.title;
-    li.children[1].textContent = note.summary;
-  }
-
-  function createListItems(notes) {
-    listItems = [];
-    var ul = document.createElement('ul');
-    model.getNotes().forEach(function(note) {
-      var li = document.createElement('li');
-      li.innerHTML = '<span></span><i></i>';
-      fillListItem(li, note);
-      ul.appendChild(li);
-      listItems.push(li);
-    });
-    document.querySelector('#noteList').appendChild(ul);
-    if (listItems.length) {
-      setSelected(0);  // TODO(wdm) Always select the first note?
+  function click(e) {
+    var t = e.target;
+    // Find the enclosing <li>.
+    for (var i = 0; t.nodeName !== 'LI' && i < 3; i++) {
+      t = t.parentNode;
     }
-  }
-
-  function onClickList(e) {
-    var target = e.target;
-    // This is a nasty hack to move clicks on the <i> tags up to their <li>.
-    if (target.parentNode.nodeName == 'LI') {
-      target = target.parentNode;
-    }
-    if (target.nodeName !== 'LI') {
+    if (t.nodeName !== 'LI') {
+      console.error('Could not find <li>', e.target, t);
       return;
     }
-    var list = toArray(document.querySelector('#noteList ul').children);
-    var i = list.indexOf(target);
-    setSelected(i);
+    var id = t.dataset.id;
+    var note = model.getNote(id);
+    updateTextArea(note);
   }
 
   function init(notes) {
-    createListItems(notes);
     createIndex(notes);
+    displayAll();
     return notes;
   }
 
   return {
     onInput: onInput,
-    onClickList: onClickList,
+    click: click,
     setSelected: setSelected,
     init: init
   };
@@ -270,6 +315,10 @@ function doClose() {
   doSave().then(window.close);
 }
 
+function doSelectOrCreateNote() {
+  // TODO(wdm)
+}
+
 //////////////////
 // Key Handling //
 //////////////////
@@ -298,7 +347,7 @@ function onKeydown(e) {
 
   // New note (press enter in the search box)
   if (e.keyCode == CODE_ENTER && e.target.id === "search") {
-    // TODO(wdm) doNewNote();
+    doSelectOrCreateNote();
   }
 }
 
@@ -316,8 +365,7 @@ function init() {
   window.addEventListener('keydown', onKeydown);
   textarea.addEventListener('input', dirtMonitor.setDirty);
   document.querySelector('#chooseFile').addEventListener('click', onChooseFile);
-  document.querySelector('#noteList')
-      .addEventListener('click', search.onClickList);
+  document.querySelector('#noteList').addEventListener('click', search.click);
   document.querySelector('#search').addEventListener('input', search.onInput);
 }
 

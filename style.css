@@ -1,3 +1,7 @@
+*, *:before, *:after {
+  box-sizing: border-box;
+}
+
 html,body,textarea,div,ul,li { margin:0; padding:0; border:0; outline:0; }
 html,body { height: 100%;}
 
@@ -34,22 +38,22 @@ body {
 }
 
 textarea {
-    flex: 1 1 auto;
     padding: 5px;
     resize: none;
 }
 
 
 /* Note list */
-ul {
+#noteList {
+    overflow-y: auto;
     list-style: none;
-    padding: 5px;
-    border: thin solid gray;
+    height: 200px;
+    padding-top: 3px;
+    padding-left: 3px;
 }
 
 li {
     padding-left: 5px;
-    margin: 4px;
 }
 
 li:hover,.selected {
@@ -66,3 +70,37 @@ i {
     font-style: normal;
 }
 
+/* Snippets */
+
+i b { color: #333; }
+
+
+
+/*
+ * Resizing
+ */
+
+.panel-flex {
+    flex:1 1 auto;
+}
+.panel {
+    border:thin solid gray;
+    overflow-y:auto;
+}
+
+#dragbar, body.resizing * {
+    cursor: row-resize !important;
+}
+
+#dragbar {
+    background-color: lightGray;
+    height:8px;
+}
+.indicator {
+    width: 15px;
+    height: 2px;
+    margin: 2px auto;
+    border-color: gray;
+    border-style:solid;
+    border-width: 1px 0 1px 0;
+}
