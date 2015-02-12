@@ -18,6 +18,10 @@ body {
     border-radius: 5px;
 }
 
+#errlog {
+    color:red;
+}
+
 button {
     position: absolute;
     right: 0px; top: 17px; /* HACK */

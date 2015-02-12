@@ -5,11 +5,13 @@
     <link rel="stylesheet" href="style.css">
   </head>
   <body>
-    <div class="titlebar">NVC - filename.txt
+    <div class="titlebar">NVC
+      <span id="filename"></span>
       <span class="dirtyIndicator"></span>
     </div>
 
     <div class="container">
+      <pre id="errlog"></pre>
       <input type="search">
       <div id="noteList"></div>
       <textarea class="content" placeholder="Your notes go here..."></textarea>

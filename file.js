@@ -1,119 +1,91 @@
-// From https://github.com/GoogleChrome/chrome-app-samples
+// Based on https://github.com/GoogleChrome/chrome-app-samples
+// Note(wdm) Rewritten using Promises.
 
-/*
-Copyright 2012 Google Inc.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-     http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-Author: Eric Bidelman (ericbidelman@chromium.org)
-Updated: Joe Marini (joemarini@google.com)
-*/
-
-var chosenEntry = null;
-var textarea = document.querySelector('textarea');
-var chooseFile = document.querySelector('#choose_file');
-
-function errorHandler(e) {
-  console.error(e);
+function chooseFile() {
+  return new Promise(function(reject, resolve) {
+    // TODO(wdm) This doesn't seem to restrict. Do I care?
+    var accepts = [{mimeTypes: ['text/*'], extensions: ['txt']}];
+    var cb = function(theEntry) {
+      if (!theEntry) {
+        return reject('No file selected.');
+      }
+      // TODO(wdm) Need error check?
+      chrome.storage.local.set(
+          {'chosenFile': chrome.fileSystem.retainEntry(theEntry)});
+      resolve(theEntry);
+    };
+    chrome.fileSystem.chooseEntry({type: 'openFile', accepts: accepts}, cb);
+  });
 }
 
-chooseFile.addEventListener('click', onChooseFile);
-
-function onChooseFile(e) {
-  var accepts = [{
-    mimeTypes: ['text/*'],
-    extensions: ['txt']  // TODO(wdm) Not working, but should it?
-  }];
-  chrome.fileSystem.chooseEntry(
-      {type: 'openFile', accepts: accepts}, function(theEntry) {
-        if (!theEntry) {
-          output.textContent = 'No file selected.';
-          return;
-        }
-        // use local storage to retain access to this file
-        chrome.storage.local.set(
-            {'chosenFile': chrome.fileSystem.retainEntry(theEntry)});
-        loadFileEntry(theEntry);
-      });
+function loadFileEntry(fileEntry) {
+  return new Promise(function(resolve, reject) {
+    fileEntry.file(function(file) {
+      var r = new FileReader();
+      r.onerror = reject;
+      r.onload = function(e) { resolve(e.target.result); };
+      r.readAsText(file);
+    });
+  });
 }
 
-// for files, read the text content into the textarea
-function loadFileEntry(_chosenEntry) {
-  chosenEntry = _chosenEntry;
-  chosenEntry.file(function(file) { readAsText(chosenEntry, parseDB); });
-}
-
+// Returns a promise of a file which can be loaded.
 function restoreChosenFile() {
-  chrome.storage.local.get('chosenFile', function(items) {
-    if (items.chosenFile) {
-      // if an entry was retained earlier, see if it can be restored
-      chrome.fileSystem.isRestorable(items.chosenFile, function(bIsRestorable) {
-        // the entry is still there, load the content
+  return new Promise(function(resolve, reject) {
+    chrome.storage.local.get('chosenFile', function(items) {
+      if (!items.chosenFile) {
+        return reject(new Error('no filename in localstorage'));
+      }
+
+      chrome.fileSystem.isRestorable(items.chosenFile, function(isRestorable) {
+        if (!isRestorable) {
+	  // TODO(wdm): When does this happen?
+          return reject(new Error('file is not restorable'));
+        }
         console.info("Restoring " + items.chosenFile);
         chrome.fileSystem.restoreEntry(items.chosenFile, function(chosenEntry) {
-          if (chosenEntry) {
-            loadFileEntry(chosenEntry)
+          if (!chosenEntry) {
+            return reject(new Error('failed to load file'));
           }
+          resolve(chosenEntry);
         });
       });
+    });
+  });
+}
+
+function writeFileEntry(writableEntry, blob) {
+  return new Promise(function(resolve, reject) {
+    if (!writableEntry) {
+      return reject(new Error('no file to write'));
     }
-  });
-}
-
-function readAsText(fileEntry, callback) {
-  fileEntry.file(function(file) {
-    var reader = new FileReader();
-
-    reader.onerror = errorHandler;
-    reader.onload = function(e) { callback(e.target.result); };
-
-    reader.readAsText(file);
-  });
-}
-
-function writeFileEntry(writableEntry, blob, callback) {
-  if (!writableEntry) {
-    console.error('Nothing selected.');
-    return;
-  }
-
-  // Note(wdm) This API seems too complex. Note how onwriteend has to be
-  // overriden twice.
-  writableEntry.createWriter(function(writer) {
-    try {
+    var t0 = Date.now();
+    // Note(wdm) This API seems too complex. Note how onwriteend has to be
+    // overriden twice.
+    var cb = function(writer) {
       var aborter = function() {
-        console.error("Write operation taking too long, aborting!" +
-                      " (current writer readyState is " + writer.readyState +
-                      ")");
         writer.abort();
+        reject(new Error('write operation timeout'));
       };
 
       var watchdog = setTimeout(aborter, 4 * 1000);
 
       writer.onerror = function(e) {
         clearTimeout(watchdog);
-        errorHandler(e);
+        reject(e);
       };
 
       writer.onwriteend = function() {
         writer.onwriteend = function() {
           clearTimeout(watchdog);
-          callback();
+          console.log('write time: ', (Date.now() - t0) / 1000);
+          resolve();
         };
         writer.seek(0);
         writer.write(blob);
       };
       writer.truncate(blob.size);
-
-    } catch (e) {
-      console.error(e, e.stack);
-    }
-
-  }, errorHandler);
+    };
+    writableEntry.createWriter(cb, reject);
+  });
 }

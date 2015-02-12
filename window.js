@@ -1,6 +1,15 @@
+// UI code.
+
+var textarea = document.querySelector('textarea');
+var errlog = document.querySelector('#errlog');
 
 function toArray(nodeList) {
   return Array.prototype.slice.call(nodeList);
+}
+
+function showError(err) {
+  console.error(err, err.stack);
+  errlog.textContent += err + '\n';
 }
 
 var dirtMonitor = (function() {
@@ -108,29 +117,40 @@ function setCaret(elem, pos) {
   range.select();
 }
 
-function save(callback) {
+///////////////
+/// File UI ///
+///////////////
+
+var fileEntry;
+
+function onChooseFile() {
+  chooseFile().then(showFilename).catch(showError);
+}
+
+function showFilename(fileEntry_) {
+  fileEntry = fileEntry_;
+  document.querySelector('#filename').textContent = fileEntry.name;
+  return fileEntry;
+}
+
+function save() {
   if (!dirtMonitor.isDirty) {
-    console.log('skipping save');
-    callback();
-    return;
+    console.log('save skipped: not dirty');
+    return Promise.resolve();
   }
   var blob = notesAsBlob();
-  var wrappedCallback = function() {
-    // TODO(wdm) IMPORTANT! error handling.
-    console.log('done');
-    dirtMonitor.setClean();
-    if (callback) {
-      callback();
-    }
-  };
-  console.log('saving...');
-  writeFileEntry(chosenEntry, blob, wrappedCallback);
+  return writeFileEntry(fileEntry, blob)
+      .then(dirtMonitor.setClean)
+      .catch(showError);
 }
 
 function doClose() {
-  save(function() { window.close(); });
+  save().then(window.close);
 }
 
+//////////////////
+// Key Handling //
+//////////////////
 
 var CODE_W = 'W'.charCodeAt(0);
 var CODE_S = 'S'.charCodeAt(0);
@@ -159,6 +179,8 @@ function onKeydown(e) {
   }
 }
 
+
+
 function onClickList(e) {
   console.log(e);
   var target = e.target;
@@ -175,10 +197,17 @@ function onClickList(e) {
 }
 
 function init() {
-  restoreChosenFile();
+  restoreChosenFile()
+      .then(showFilename)
+      .then(loadFileEntry)
+      .then(parseDB)
+      .catch(showError);
+
   window.addEventListener('keydown', onKeydown);
   textarea.addEventListener('input', dirtMonitor.setDirty);
   document.querySelector('#noteList').addEventListener('click', onClickList);
+  document.querySelector('#choose_file')
+      .addEventListener('click', onChooseFile);
 }
 
 init();
