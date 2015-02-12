@@ -1,10 +1,10 @@
 // UI code.
 "use strict";
 
-function s(s) {
-  var el = document.querySelector(s);
-  if (!el) {
-    throw new Error("Could not find " + s);
+function s(selector, opt_silent) {
+  var el = document.querySelector(selector);
+  if (!el && !opt_silent) {
+    throw new Error("Could not find " + selector);
   }
   return el;
 }
@@ -96,7 +96,7 @@ var highlight = (function() {
 
   function highlight(terms, text) {
     text = safeHtml(text);
-    if (terms.length) {
+    if (terms && terms.length) {
       var regexStr = terms.map(escapeRegExp).join('|');
       var regex = new RegExp(regexStr, 'gi');
       text = text.replace(regex, '<q>$&</q>');
@@ -120,36 +120,41 @@ var search = (function() {
     notes.forEach(function(n) { index.add(n); });
   }
 
-  function setSelected(opt_index) {
-    // Calling setSelected without an index just persists any textarea changes.
-    var i = (typeof opt_index === 'number') ? opt_index : selected;
-
+  // Store any edits in the textarea.
+  function storeEdits() {
     if (typeof selected === "number") {
-      // Store any edits before switching note.
-      var updatedNote = DB.parseNote(textarea.value);
+      var updatedNote = DB.parseNote(textarea.value, selected);
       model.setNote(selected, updatedNote);
-      // HACK: update list item.
+      // Update the listed item.
+      onInput();
+    }
+  }
+
+  function setSelected(i) {
+    if (typeof selected === 'number') {
+      var old = s('.selected', true);
+      if (old) {
+        old.classList.remove('selected');
+      }
     }
     selected = i;
-    // HACK: show selection.
-    // Set textarea to current note.
-    updateTextArea(model.getNote(selected));
+    if (typeof selected === 'number') {
+      var li = s('li[data-id="' + i + '"]');
+      li.classList.add('selected');
+      // Set textarea to current note.
+      updateTextArea(model.getNote(selected));
+    } else {
+      textarea.value = '';
+    }
   }
 
   var noteListEl = s('#noteList');
 
-  function displayAll(opt_terms) {
-    var terms = opt_terms || [];
-    // TODO(wdm) What order?
-    var html = model.getNotes().map(function(note) {
-      return displayNote(terms, note);
-    }).join('\n');
-    noteList.innerHTML = html;
-  }
-
-
   // TODO(wdm) modify summary to show highlighted terms?
-  function displayNote(terms, note) {
+  function htmlDisplayNote(terms, note) {
+    if (typeof note.id !== 'number') {
+      throw new Error("note without id", note);
+    }
     var ID = note.id;
     var TITLE = highlight(terms, note.title);
     var SUMMARY = highlight(terms, note.summary);
@@ -158,31 +163,36 @@ var search = (function() {
     return html;
   }
 
+  // highlight terms.
   function displayMatches(terms, results) {
+    var html;
     if (!results || !results.length) {
-      displayAll(terms);
-      return;
+      // Display all notes.
+      html = model.getNotes().map(function(note) {
+        return htmlDisplayNote(terms, note);
+      });
+    } else {
+      // Filter by term and order by score.
+      html = results.map(function(r) {
+        var id = parseInt(r.ref, 10);
+        var note = model.getNote(id);
+        return htmlDisplayNote(terms, note);
+      });
     }
-    // Ordered by result score.
-    var html = results.map(function(r) {
-      var id = parseInt(r.ref, 10);
-      var note = model.getNote(id);
-      return displayNote(terms, note);
-    }).join('\n');
-    noteList.innerHTML = html;
+    noteList.innerHTML = html.join('\n');
+    setSelected(selected);
   }
 
   // TOOD(wdm) Do something with score?
   var inputEl = s('#search');
   function onInput(e) {
     var q = inputEl.value;
-    if (!q.length) {
-      displayAll();
-      return;
+    var results;
+    var terms;
+    if (q.length) {
+      results = index.search(q);
+      terms = q.split(/\s+/);
     }
-
-    var results = index.search(q);
-    var terms = q.split(/\s+/);
     displayMatches(terms, results);
   }
 
@@ -196,21 +206,20 @@ var search = (function() {
       console.error('Could not find <li>', e.target, t);
       return;
     }
-    var id = t.dataset.id;
-    var note = model.getNote(id);
-    updateTextArea(note);
+    var id = parseInt(t.dataset.id, 10);
+    setSelected(id);
   }
 
   function init(notes) {
     createIndex(notes);
-    displayAll();
+    displayMatches();
     return notes;
   }
 
   return {
     onInput: onInput,
     click: click,
-    setSelected: setSelected,
+    storeEdits: storeEdits,
     init: init
   };
 })();
@@ -250,6 +259,9 @@ var DB = (function() {
   }
 
   function parseNote(rawNote, i) {
+    if (typeof i !== 'number') {
+      throw new Error('tried to create note without index');
+    }
     var firstLine = rawNote.indexOf('\n');
     return {
       id: i,
@@ -261,13 +273,10 @@ var DB = (function() {
 
   // TODO(wdm) Better name!
   function notesAsBlob() {
-    search.setSelected();  // Grabs any changes in textarea.
+    search.storeEdits();  // Grabs any changes in textarea.
     var texts = model.getNotes().map(function(note) { return note.text; });
     var rawText = texts.join(SEPERATOR);
-    return new Blob([rawText], {
-      type:
-        'text/plain'
-    });
+    return new Blob([rawText], { 'type' : 'text/plain' });
   }
   return {
     parse: parse,
