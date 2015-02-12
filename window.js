@@ -141,8 +141,9 @@ var search = (function() {
     if (typeof selected === 'number') {
       var li = s('li[data-id="' + i + '"]');
       li.classList.add('selected');
-      // Set textarea to current note.
-      updateTextArea(model.getNote(selected));
+      li.scrollIntoViewIfNeeded()
+          // Set textarea to current note.
+          updateTextArea(model.getNote(selected));
     } else {
       textarea.value = '';
     }
@@ -166,9 +167,12 @@ var search = (function() {
   // highlight terms.
   function displayMatches(terms, results) {
     var html;
+    var visibleNotes = {};
+
     if (!results || !results.length) {
       // Display all notes.
       html = model.getNotes().map(function(note) {
+        visibleNotes[note.id] = true;
         return htmlDisplayNote(terms, note);
       });
     } else {
@@ -176,11 +180,14 @@ var search = (function() {
       html = results.map(function(r) {
         var id = parseInt(r.ref, 10);
         var note = model.getNote(id);
+        visibleNotes[id] = true;
         return htmlDisplayNote(terms, note);
       });
     }
     noteList.innerHTML = html.join('\n');
-    setSelected(selected);
+    if (visibleNotes[selected]) {
+      setSelected(selected);
+    }
   }
 
   // TOOD(wdm) Do something with score?
@@ -194,6 +201,33 @@ var search = (function() {
       terms = q.split(/\s+/);
     }
     displayMatches(terms, results);
+  }
+
+  function moveSelection(isDown) {
+    var toSelect;
+    var old = s('.selected', true);
+    if (!old) {
+      toSelect = noteListEl.firstChild;
+    } else {
+      toSelect = isDown ? old.nextElementSibling : old.previousElementSibling;
+    }
+    if (toSelect) {
+      var id = parseInt(toSelect.dataset.id, 10);
+      setSelected(id);
+    }
+  }
+
+  var CODE_UP = 38;
+  var CODE_DOWN = 40;
+  function keydown(e) {
+    if (e.keyCode === CODE_DOWN) {
+      e.preventDefault();
+      moveSelection(true);
+    }
+    if (e.keyCode === CODE_UP) {
+      e.preventDefault();
+      moveSelection(false);
+    }
   }
 
   function click(e) {
@@ -218,6 +252,7 @@ var search = (function() {
 
   return {
     onInput: onInput,
+    keydown: keydown,
     click: click,
     storeEdits: storeEdits,
     init: init
@@ -390,6 +425,7 @@ function init() {
   s('#chooseFile').addEventListener('click', onChooseFile);
   s('#noteList').addEventListener('click', search.click);
   s('#search').addEventListener('input', search.onInput);
+  s('#search').addEventListener('keydown', search.keydown);
 }
 
 init();
