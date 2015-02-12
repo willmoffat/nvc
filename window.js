@@ -51,13 +51,13 @@ var search = (function() {
   var listItems;
   var selected = null;
 
-  function createIndex() {
+  function createIndex(notes) {
     index = lunr(function() {
       this.field('title', {boost: 10});
       this.field('text');
       this.ref('id');
     });
-    DB.getNotes().forEach(function(n) { index.add(n); });
+    notes.forEach(function(n) { index.add(n); });
   }
 
   function setSelected(opt_index) {
@@ -66,17 +66,21 @@ var search = (function() {
 
     if (typeof selected === "number") {
       // Store any edits before switching note.
-      DB.getNotes()[selected] = DB.parseNote(textarea.value);  // HACK
+      var updatedNote = DB.parseNote(textarea.value);
+      model.setNote(selected, updatedNote);
       var listItem = document.querySelector('#noteList ul').children[selected];
-      fillListItem(listItem, DB.getNotes()[selected]);
+      fillListItem(listItem, updatedNote);
       listItem.classList.remove('selected');
     }
     selected = i;
-    document.querySelector('#noteList ul')
-        .children[selected]
-        .classList.add('selected');
+    var listItem = document.querySelector('#noteList ul').children[selected];
+    if (!listItem) {
+      console.warn('selected invalid', selected);
+      return;
+    }
+    listItem.classList.add('selected');
     // Set textarea to current note.
-    updateTextArea(DB.getNotes()[i].text);
+    updateTextArea(model.getNote(selected));
   }
 
   function showAll() {
@@ -108,10 +112,10 @@ var search = (function() {
     li.children[1].textContent = note.summary;
   }
 
-  function updateNoteList() {
+  function createListItems(notes) {
     listItems = [];
     var ul = document.createElement('ul');
-    DB.getNotes().forEach(function(note) {
+    model.getNotes().forEach(function(note) {
       var li = document.createElement('li');
       li.innerHTML = '<span></span><i></i>';
       fillListItem(li, note);
@@ -119,7 +123,9 @@ var search = (function() {
       listItems.push(li);
     });
     document.querySelector('#noteList').appendChild(ul);
-    setSelected(0);  // HACK?
+    if (listItems.length) {
+      setSelected(0);  // TODO(wdm) Always select the first note?
+    }
   }
 
   function onClickList(e) {
@@ -136,9 +142,10 @@ var search = (function() {
     setSelected(i);
   }
 
-  function init() {
-    updateNoteList();
-    createIndex();
+  function init(notes) {
+    createListItems(notes);
+    createIndex(notes);
+    return notes;
   }
 
   return {
@@ -150,6 +157,24 @@ var search = (function() {
 })();
 
 
+// TODO(wdm) Does this actually buy us anything over a global 'notes'?
+var model = (function() {
+
+  // In memory note objects.
+  var notes = [];
+
+  return {
+    init: function init(notes_) {
+      notes = notes_;
+      return notes;
+    },
+    setNote: function setNote(i, note) { notes[i] = note; },
+    getNote: function getNote(i) { return notes[i]; },
+    getNotes: function getNotes() { return notes; }
+  };
+
+})();
+
 ////////
 // DB //
 ////////
@@ -159,13 +184,10 @@ var DB = (function() {
   // TODO(wdm) Check that SEPERATOR does not appear in notes.
   var SEPERATOR = '\n[//]: # (NVC: Do not edit this line)\n\n';
 
-  // In memory note objects.
-  var notes = [];
-
-  function parseDB(rawText) {
+  function parse(rawText) {
     var rawNotes = rawText.split(SEPERATOR);
-    notes = rawNotes.map(parseNote);
-    search.init();
+    var notes = rawNotes.map(parseNote);
+    return notes;
   }
 
   function parseNote(rawNote, i) {
@@ -181,7 +203,7 @@ var DB = (function() {
   // TODO(wdm) Better name!
   function notesAsBlob() {
     search.setSelected();  // Grabs any changes in textarea.
-    var texts = notes.map(function(note) { return note.text; });
+    var texts = model.getNotes().map(function(note) { return note.text; });
     var rawText = texts.join(SEPERATOR);
     return new Blob([rawText], {
       type:
@@ -189,10 +211,9 @@ var DB = (function() {
     });
   }
   return {
-    parseDB: parseDB,
+    parse: parse,
     parseNote: parseNote,
     notesAsBlob: notesAsBlob,
-    getNotes: function() { return notes; }
   };
 })();
 
@@ -202,8 +223,8 @@ var DB = (function() {
 //////////////
 
 
-function updateTextArea(text) {
-  textarea.value = text;
+function updateTextArea(note) {
+  textarea.value = note.text;
   // textarea.focus();
   // TODO(wdm) Restore actual previous position.
   // textarea.setSelectionRange(0, 0);
@@ -287,7 +308,9 @@ function init() {
   restoreChosenFile()
       .then(showFilename)
       .then(loadFileEntry)
-      .then(DB.parseDB)
+      .then(DB.parse)
+      .then(model.init)
+      .then(search.init)
       .catch(showError);
 
   window.addEventListener('keydown', onKeydown);
