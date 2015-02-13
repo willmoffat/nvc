@@ -95,9 +95,7 @@ var highlight = (function() {
   }
 
   // Don't hightlight 1 and 2 char words.
-  function keepTerm(term) {
-    return term.length>2;
-  }
+  function keepTerm(term) { return term.length > 2; }
 
   function highlight(terms, text) {
     text = safeHtml(text);
@@ -311,7 +309,10 @@ var model = (function() {
       notes.push(note);
       return note;
     },
-    setNote: function setNote(i, note) { notes[i] = note; },
+    setNote: function setNote(i, note) {
+      notes[i] = note;
+      saveNoteLocal(note);  // TODO(wdm) .then() ?
+    },
     getNote: function getNote(i) { return notes[i]; },
     getNotes: function getNotes() { return notes; }
   };
@@ -394,13 +395,24 @@ function setCaret(elem, pos) {
 
 var fileEntry;
 
+function maybeChooseFile() {
+  if (fileEntry) {
+    return Promise.resolve(fileEntry);
+  }
+  return onChooseFile();
+}
+
 function onChooseFile() {
-  chooseFile().then(showFilename).catch(showError);
+  return chooseBackupFile().then(showFilename).catch(showError);
 }
 
 function showFilename(fileEntry_) {
   fileEntry = fileEntry_;
-  s('#filename').textContent = fileEntry.name;
+  var name = '[no backup file]';
+  if (fileEntry) {
+     name = fileEntry.name;
+  }
+  s('#filename').textContent = name;
   return fileEntry;
 }
 
@@ -410,7 +422,8 @@ function doSave() {
     return Promise.resolve();
   }
   var blob = DB.notesAsBlob();
-  return writeFileEntry(fileEntry, blob)
+  return maybeChooseFile()
+      .then(function(fileEntry) { return writeFileEntry(fileEntry, blob); })
       .then(dirtMonitor.setClean)
       .catch(showError);
 }
@@ -472,12 +485,48 @@ var keyHandler = (function() {
   }
 })();
 
+/* Debug: show whole store:
+chrome.storage.local.get(null, function(s) { console.log('store', s) });
+*/
+
+function loadLocalNotes() {
+  return new Promise(function(resolve, reject) {
+    // Load everything in local storage.
+    chrome.storage.local.get(null, function(items) {
+      var notes = [];
+      for (var key in items) {
+        if (key.indexOf('NOTE.') === 0) {
+          var id = parseInt(key.substr(5), 10);
+          var rawText = items[key];
+          var note = DB.parseNote(rawText, id);
+          notes.push(note);
+        } else {
+          console.log('loadLocalNotes: ignoring', key);
+        }
+      }
+      resolve(notes);
+    });
+  });
+}
+
+function saveNoteLocal(note) {
+  return new Promise(function(resolve, reject) {
+    var key = 'NOTE.' + note.id;
+    var obj = {};
+    obj[key] = note.text;
+
+    chrome.storage.local.set(obj, function() { resolve(); });
+  });
+}
 
 function init() {
-  restoreChosenFile()
+  // TODO(wdm) Import
+  // .then(loadFileEntry)
+  //          .then(DB.parse)
+
+  restoreBackupFile()
       .then(showFilename)
-      .then(loadFileEntry)
-      .then(DB.parse)
+      .then(loadLocalNotes)
       .then(model.init)
       .then(search.init)
       .catch(showError);

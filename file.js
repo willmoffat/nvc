@@ -1,17 +1,20 @@
 // Based on https://github.com/GoogleChrome/chrome-app-samples
 // Note(wdm) Rewritten using Promises.
 
-function chooseFile() {
-  return new Promise(function(reject, resolve) {
+var FILENAME_KEY = 'APP.BACKUP';
+
+function chooseBackupFile() {
+  return new Promise(function(resolve, reject) {
     // TODO(wdm) This doesn't seem to restrict. Do I care?
     var accepts = [{mimeTypes: ['text/*'], extensions: ['txt']}];
     var cb = function(theEntry) {
       if (!theEntry) {
-        return reject('No file selected.');
+        return reject(new Error('No file selected.'));
       }
       // TODO(wdm) Need error check?
-      chrome.storage.local.set(
-          {'chosenFile': chrome.fileSystem.retainEntry(theEntry)});
+      var obj = {};
+      obj[FILENAME_KEY] = chrome.fileSystem.retainEntry(theEntry);
+      chrome.storage.local.set(obj);
       resolve(theEntry);
     };
     chrome.fileSystem.chooseEntry({type: 'openFile', accepts: accepts}, cb);
@@ -30,24 +33,26 @@ function loadFileEntry(fileEntry) {
 }
 
 // Returns a promise of a file which can be loaded.
-function restoreChosenFile() {
+function restoreBackupFile() {
   return new Promise(function(resolve, reject) {
-    chrome.storage.local.get('chosenFile', function(items) {
-      if (!items.chosenFile) {
-        return reject(new Error('no filename in localstorage'));
+    chrome.storage.local.get(FILENAME_KEY, function(items) {
+      var filename = items[FILENAME_KEY];
+      if (!filename) {
+	console.warn('No', FILENAME_KEY, 'in localstorage');
+        return resolve(null);
       }
 
-      chrome.fileSystem.isRestorable(items.chosenFile, function(isRestorable) {
+      chrome.fileSystem.isRestorable(filename, function(isRestorable) {
         if (!isRestorable) {
-	  // TODO(wdm): When does this happen?
+          // TODO(wdm): When does this happen?
           return reject(new Error('file is not restorable'));
         }
-        console.info("Restoring " + items.chosenFile);
-        chrome.fileSystem.restoreEntry(items.chosenFile, function(chosenEntry) {
-          if (!chosenEntry) {
+        console.info("Restoring " + filename);
+        chrome.fileSystem.restoreEntry(filename, function(fileEntry) {
+          if (!fileEntry) {
             return reject(new Error('failed to load file'));
           }
-          resolve(chosenEntry);
+          resolve(fileEntry);
         });
       });
     });
