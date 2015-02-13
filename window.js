@@ -94,10 +94,15 @@ var highlight = (function() {
     return str.replace(/[.^$*+?()[{\\|\]-]/g, '\\$&');
   }
 
+  // Don't hightlight 1 and 2 char words.
+  function keepTerm(term) {
+    return term.length>2;
+  }
+
   function highlight(terms, text) {
     text = safeHtml(text);
     if (terms && terms.length) {
-      var regexStr = terms.map(escapeRegExp).join('|');
+      var regexStr = terms.filter(keepTerm).map(escapeRegExp).join('|');
       var regex = new RegExp(regexStr, 'gi');
       text = text.replace(regex, '<q>$&</q>');
     }
