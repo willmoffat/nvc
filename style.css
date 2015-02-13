@@ -71,8 +71,11 @@ li {
     margin-top: 5px;
 }
 
-li:hover,.selected {
-    background-color: lightBlue;
+li:hover {
+    background-color: lightCyan;
+}
+.selected {
+    background-color: lightBlue !important;
 }
 
 /* Reset <q> <b> <i> tags */

@@ -110,6 +110,7 @@ var search = (function() {
 
   var index;
   var selected = null;
+  var searchEl = s('#search');
 
   function createIndex(notes) {
     index = lunr(function() {
@@ -123,15 +124,26 @@ var search = (function() {
   // Store any edits in the textarea.
   function storeEdits() {
     if (typeof selected === "number") {
+      var old = model.getNote(selected);
+      if (old.text === textarea.value) {
+        return;
+      }
       var updatedNote = DB.parseNote(textarea.value, selected);
       model.setNote(selected, updatedNote);
       // Update the listed item.
-      onInput();
+      display();
     }
+  }
+
+  function resetSelected() {
+    searchEl.value = '';
+    searchEl.focus();
+    setSelected(null);
   }
 
   function setSelected(i) {
     if (typeof selected === 'number') {
+      storeEdits();
       var old = s('.selected', true);
       if (old) {
         old.classList.remove('selected');
@@ -141,9 +153,10 @@ var search = (function() {
     if (typeof selected === 'number') {
       var li = s('li[data-id="' + i + '"]');
       li.classList.add('selected');
-      li.scrollIntoViewIfNeeded()
-          // Set textarea to current note.
-          updateTextArea(model.getNote(selected));
+      li.scrollIntoViewIfNeeded();
+      // Set textarea to current note.
+      var focus = false;
+      updateTextArea(model.getNote(selected), focus);
     } else {
       textarea.value = '';
     }
@@ -190,12 +203,18 @@ var search = (function() {
     }
   }
 
+  function onInput() {
+    setSelected(null);
+    display();
+  }
+
+  // Display notes that match the current search terms (or all).
   // TOOD(wdm) Do something with score?
-  var inputEl = s('#search');
-  function onInput(e) {
-    var q = inputEl.value;
+  function display() {
+    var q = searchEl.value;
     var results;
     var terms;
+
     if (q.length) {
       results = index.search(q);
       terms = q.split(/\s+/);
@@ -217,13 +236,9 @@ var search = (function() {
     }
   }
 
-  function moveSelectionUp() {
-    moveSelection(false);
-  }
+  function moveSelectionUp() { moveSelection(false); }
 
-  function moveSelectionDown() {
-    moveSelection(true);
-  }
+  function moveSelectionDown() { moveSelection(true); }
 
   function click(e) {
     var t = e.target;
@@ -239,6 +254,22 @@ var search = (function() {
     setSelected(id);
   }
 
+  function selectOrCreateNote() {
+    if (typeof selected !== 'number') {
+      // One newline is required to mark end of title. The next newline is
+      // optional but looks nicer.
+      var rawText = searchEl.value + '\n\n';
+      textarea.value = rawText;  // HACK: required because otherwise storeEdits
+                                 // will wipe out our new note.
+      var note = model.newNote(rawText);
+      index.add(note);
+      display();  // HACK: need to add listitem to ul.
+      setSelected(note.id);
+    }
+    var focus = true;
+    updateTextArea(model.getNote(selected), focus);
+  }
+
   function init(notes) {
     createIndex(notes);
     displayMatches();
@@ -247,8 +278,10 @@ var search = (function() {
 
   return {
     onInput: onInput,
+    selectOrCreateNote: selectOrCreateNote,
     moveSelectionUp: moveSelectionUp,
     moveSelectionDown: moveSelectionDown,
+    resetSelected: resetSelected,
     click: click,
     storeEdits: storeEdits,
     init: init
@@ -266,6 +299,12 @@ var model = (function() {
     init: function init(notes_) {
       notes = notes_;
       return notes;
+    },
+    newNote: function(rawText) {
+      var id = notes.length;
+      var note = DB.parseNote(rawText, id);
+      notes.push(note);
+      return note;
     },
     setNote: function setNote(i, note) { notes[i] = note; },
     getNote: function getNote(i) { return notes[i]; },
@@ -321,13 +360,19 @@ var DB = (function() {
 // TextArea //
 //////////////
 
-
-function updateTextArea(note) {
-  textarea.value = note.text;
-  // textarea.focus();
-  // TODO(wdm) Restore actual previous position.
-  // textarea.setSelectionRange(0, 0);
-  // textarea.scrollTop = 0;
+function updateTextArea(note, focus) {
+  var text = note.text;
+  textarea.value = text;
+  if (focus) {
+    textarea.focus();
+    // Move to first line after title.
+    var pos = note.title.length + 1;
+    if (text[pos] === '\n') {
+      pos++;
+    }
+    textarea.setSelectionRange(pos, pos);
+    textarea.scrollTop = 0;
+  }
 }
 
 function setCaret(elem, pos) {
@@ -369,10 +414,6 @@ function doClose() {
   doSave().then(window.close);
 }
 
-function doSelectOrCreateNote() {
-  // TODO(wdm)
-}
-
 //////////////////
 // Key Handling //
 //////////////////
@@ -404,7 +445,7 @@ var keyHandler = (function() {
 
     // Reset (deselect note and start new search)
     if (key === KEY_ESC) {
-      return cmd(e, doReset);
+      return cmd(e, search.resetSelected);
     }
 
     // Save: Ctrl-S
@@ -414,7 +455,7 @@ var keyHandler = (function() {
 
     if (e.target !== textarea) {
       if (key == KEY_ENTER) {
-        return cmd(e, doSelectOrCreateNote);
+        return cmd(e, search.selectOrCreateNote);
       }
       if (key === KEY_DOWN) {
         return cmd(e, search.moveSelectionDown);
