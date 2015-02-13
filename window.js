@@ -217,17 +217,12 @@ var search = (function() {
     }
   }
 
-  var CODE_UP = 38;
-  var CODE_DOWN = 40;
-  function keydown(e) {
-    if (e.keyCode === CODE_DOWN) {
-      e.preventDefault();
-      moveSelection(true);
-    }
-    if (e.keyCode === CODE_UP) {
-      e.preventDefault();
-      moveSelection(false);
-    }
+  function moveSelectionUp() {
+    moveSelection(false);
+  }
+
+  function moveSelectionDown() {
+    moveSelection(true);
   }
 
   function click(e) {
@@ -252,7 +247,8 @@ var search = (function() {
 
   return {
     onInput: onInput,
-    keydown: keydown,
+    moveSelectionUp: moveSelectionUp,
+    moveSelectionDown: moveSelectionDown,
     click: click,
     storeEdits: storeEdits,
     init: init
@@ -381,34 +377,54 @@ function doSelectOrCreateNote() {
 // Key Handling //
 //////////////////
 
-var CODE_W = 'W'.charCodeAt(0);
-var CODE_S = 'S'.charCodeAt(0);
-var CODE_1 = '1'.charCodeAt(0);
-var CODE_ESC = 27;
-var CODE_ENTER = 13;
+var keyHandler = (function() {
+  var KEY_W = 'W'.charCodeAt(0);
+  var KEY_S = 'S'.charCodeAt(0);
+  var KEY_1 = '1'.charCodeAt(0);
+  var KEY_ESC = 27;
+  var KEY_ENTER = 13;
+  var KEY_UP = 38;
+  var KEY_DOWN = 40;
 
-function onKeydown(e) {
-  // Dismiss (with save): ESCAPE, Alt-1, Ctrl-W
-  if ((e.keyCode === CODE_ESC) || (e.altKey && e.keyCode === CODE_1) ||
-      (e.ctrlKey && e.keyCode === CODE_W)) {
+  // return values don't matter.
+  function cmd(e, func) {
     e.preventDefault();
-    doClose();
-    return;
+    func();
   }
 
-  // Save: Ctrl-S
-  if (e.ctrlKey && e.keyCode === CODE_S) {
-    e.preventDefault();
-    doSave();
-    return;
-  }
+  return function keyHandler(e) {
+    var Alt = e.altKey;
+    var Ctrl = e.ctrlKey;
+    var key = e.keyCode;
 
-  // New note (press enter in the search box)
-  if (e.keyCode == CODE_ENTER && e.target.id === "search") {
-    doSelectOrCreateNote();
-  }
-}
+    // Dismiss (with save)
+    if ((Alt && key === KEY_1) || (Ctrl && key === KEY_W)) {
+      return cmd(e, doClose);
+    }
 
+    // Reset (deselect note and start new search)
+    if (key === KEY_ESC) {
+      return cmd(e, doReset);
+    }
+
+    // Save: Ctrl-S
+    if (Ctrl && key === KEY_S) {
+      return cmd(e, doSave);
+    }
+
+    if (e.target !== textarea) {
+      if (key == KEY_ENTER) {
+        return cmd(e, doSelectOrCreateNote);
+      }
+      if (key === KEY_DOWN) {
+        return cmd(e, search.moveSelectionDown);
+      }
+      if (key === KEY_UP) {
+        return cmd(e, search.moveSelectionUp);
+      }
+    }
+  }
+})();
 
 
 function init() {
@@ -420,12 +436,11 @@ function init() {
       .then(search.init)
       .catch(showError);
 
-  window.addEventListener('keydown', onKeydown);
+  window.addEventListener('keydown', keyHandler);
   textarea.addEventListener('input', dirtMonitor.setDirty);
   s('#chooseFile').addEventListener('click', onChooseFile);
   s('#noteList').addEventListener('click', search.click);
   s('#search').addEventListener('input', search.onInput);
-  s('#search').addEventListener('keydown', search.keydown);
 }
 
 init();
