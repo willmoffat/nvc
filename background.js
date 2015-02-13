@@ -16,8 +16,7 @@ function debug_reset() {
 function launch() {
   var windows = chrome.app.window.getAll();
   if (windows.length) {
-    // Close existing window
-    windows[0].contentWindow.doClose();
+    windows[0].show();
   } else {
     var launchData = null;  // TODO(wdm) Anything to pass in?
     createWin(launchData);

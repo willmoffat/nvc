@@ -134,14 +134,14 @@ var search = (function() {
       var updatedNote = DB.parseNote(textarea.value, selected);
       model.setNote(selected, updatedNote);
       // Update the listed item.
-      display();
+      displayNotes();
     }
   }
 
   function resetSelected() {
     searchEl.value = '';
     searchEl.focus();
-    setSelected(null);
+    onInput();
   }
 
   function setSelected(i) {
@@ -208,12 +208,12 @@ var search = (function() {
 
   function onInput() {
     setSelected(null);
-    display();
+    displayNotes();
   }
 
   // Display notes that match the current search terms (or all).
   // TOOD(wdm) Do something with score?
-  function display() {
+  function displayNotes() {
     var q = searchEl.value;
     var results;
     var terms;
@@ -266,7 +266,7 @@ var search = (function() {
                                  // will wipe out our new note.
       var note = model.newNote(rawText);
       index.add(note);
-      display();  // HACK: need to add listitem to ul.
+      displayNotes();  // HACK: need to add listitem to ul.
       setSelected(note.id);
     }
     var focus = true;
@@ -410,7 +410,7 @@ function showFilename(fileEntry_) {
   fileEntry = fileEntry_;
   var name = '[no backup file]';
   if (fileEntry) {
-     name = fileEntry.name;
+    name = fileEntry.name;
   }
   s('#filename').textContent = name;
   return fileEntry;
@@ -428,6 +428,10 @@ function doSave() {
       .catch(showError);
 }
 
+function doHide() {
+  chrome.app.window.current().hide();
+}
+
 function doClose() {
   doSave().then(window.close);
 }
@@ -437,50 +441,31 @@ function doClose() {
 //////////////////
 
 var keyHandler = (function() {
-  var KEY_W = 'W'.charCodeAt(0);
-  var KEY_S = 'S'.charCodeAt(0);
-  var KEY_1 = '1'.charCodeAt(0);
-  var KEY_ESC = 27;
-  var KEY_ENTER = 13;
-  var KEY_UP = 38;
-  var KEY_DOWN = 40;
 
-  // return values don't matter.
-  function cmd(e, func) {
-    e.preventDefault();
-    func();
-  }
+  var global_handlers = {
+    27: search.resetSelected,  // Escape.
+    'Alt-1': doHide,
+    'Ctrl-W': doClose,
+    'Ctrl-S': doSave,
+  };
+
+  var almost_global_handlers = {
+    13: search.selectOrCreateNote,  // Enter.
+    40: search.moveSelectionDown,   // Cursor down.
+    38: search.moveSelectionUp,     // Cursor up.
+  };
 
   return function keyHandler(e) {
-    var Alt = e.altKey;
-    var Ctrl = e.ctrlKey;
-    var key = e.keyCode;
-
-    // Dismiss (with save)
-    if ((Alt && key === KEY_1) || (Ctrl && key === KEY_W)) {
-      return cmd(e, doClose);
+    var k = e.keyCode;
+    var pressed = (e.ctrlKey ? 'Ctrl-' : '') + (e.altKey ? 'Alt-' : '') +
+                  (k < 48 ? k : String.fromCharCode(k));
+    var handler = global_handlers[pressed];
+    if (!handler && (e.target !== textarea)) {
+      handler = almost_global_handlers[pressed];
     }
-
-    // Reset (deselect note and start new search)
-    if (key === KEY_ESC) {
-      return cmd(e, search.resetSelected);
-    }
-
-    // Save: Ctrl-S
-    if (Ctrl && key === KEY_S) {
-      return cmd(e, doSave);
-    }
-
-    if (e.target !== textarea) {
-      if (key == KEY_ENTER) {
-        return cmd(e, search.selectOrCreateNote);
-      }
-      if (key === KEY_DOWN) {
-        return cmd(e, search.moveSelectionDown);
-      }
-      if (key === KEY_UP) {
-        return cmd(e, search.moveSelectionUp);
-      }
+    if (handler) {
+      e.preventDefault();
+      handler();
     }
   }
 })();
