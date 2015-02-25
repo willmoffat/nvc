@@ -313,7 +313,13 @@ var model = (function() {
       notes[i] = note;
       saveNoteLocal(note);  // TODO(wdm) .then() ?
     },
-    getNote: function getNote(i) { return notes[i]; },
+    getNote: function getNote(i) {
+      var note = notes[i];
+      if (!note) {
+        throw new Error('invalid note index', i);
+      }
+      return notes[i];
+    },
     getNotes: function getNotes() { return notes; }
   };
 
@@ -367,6 +373,9 @@ var DB = (function() {
 //////////////
 
 function updateTextArea(note, focus) {
+  if (!note) {
+    throw new Error('invalid note', note);
+  }
   var text = note.text;
   textarea.value = text;
   if (focus) {
@@ -484,7 +493,9 @@ function loadLocalNotes() {
           var id = parseInt(key.substr(5), 10);
           var rawText = items[key];
           var note = DB.parseNote(rawText, id);
-          notes.push(note);
+          // Items may not be in order and some ids may be missing.
+          // So we use fill a sparse array rather than using push().
+          notes[id] = note;
         } else {
           console.log('loadLocalNotes: ignoring', key);
         }
