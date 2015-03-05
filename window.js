@@ -60,7 +60,8 @@ var dirtMonitor = (function() {
   var setDirty = function() {
     if (!isDirty) {
       isDirty = true;
-      titlebar.classList.add('dirty');
+      // TODO(wdm) Do I still want to show if exported file is outdated?
+      // DISABLED: titlebar.classList.add('dirty');
     }
   };
   var setClean = function() {
@@ -180,6 +181,16 @@ var search = (function() {
     return html;
   }
 
+  function byTitle(a, b) {
+    if (a.title > b.title) {
+      return 1;
+    }
+    if (a.title < b.title) {
+      return -1;
+    }
+    return 0;
+  }
+
   // highlight terms.
   function displayMatches(terms, results) {
     var html;
@@ -187,7 +198,7 @@ var search = (function() {
 
     if (!results || !results.length) {
       // Display all notes.
-      html = model.getNotes().map(function(note) {
+      html = model.getNotes().sort(byTitle).map(function(note) {
         visibleNotes[note.id] = true;
         return htmlDisplayNote(terms, note);
       });
@@ -425,6 +436,7 @@ function showFilename(fileEntry_) {
   return fileEntry;
 }
 
+// TODO(wdm) Rename to 'export' since notes are save locally after every edit.
 function doSave() {
   if (!dirtMonitor.isDirty) {
     console.log('save skipped: not dirty');
