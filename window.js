@@ -98,6 +98,7 @@ var highlight = (function() {
   }
 
   // Don't hightlight 1 and 2 char words.
+  // TODO(wdm) Highlight [], #.
   function keepTerm(term) { return term.length > 2; }
 
   function highlight(terms, text) {
@@ -429,53 +430,69 @@ var editor = (function() {
   };
 })();
 
-///////////////
-/// File UI ///
-///////////////
+//////////////////
+/// File Backup //
+//////////////////
 
-var fileEntry;
+var backup = (function() {
+  var fileEntry;
 
-function maybeChooseFile() {
-  if (fileEntry) {
-    return Promise.resolve(fileEntry);
+  function maybeChooseFile() {
+    if (fileEntry) {
+      return Promise.resolve(fileEntry);
+    }
+    return onChooseFile();
   }
-  return onChooseFile();
-}
 
-function onChooseFile() {
-  return chooseBackupFile().then(showFilename).catch(showError);
-}
-
-function showFilename(fileEntry_) {
-  fileEntry = fileEntry_;
-  var name = '[no backup file]';
-  if (fileEntry) {
-    name = fileEntry.name;
+  function onChooseFile() {
+    return chooseBackupFile()
+        .then(storeFilename)
+        .then(win.showFilename)
+        .catch(showError);
   }
-  s('#filename').textContent = name;
-  return fileEntry;
-}
 
-// TODO(wdm) Rename to 'export' since notes are save locally after every edit.
-function doSave() {
-  if (!dirtMonitor.isDirty) {
-    console.log('save skipped: not dirty');
-    return Promise.resolve();
+  function storeFilename(fileEntry_) {
+    fileEntry = fileEntry_;
+    return fileEntry;
   }
-  var blob = DB.notesAsBlob();
-  return maybeChooseFile()
-      .then(function(fileEntry) { return writeFileEntry(fileEntry, blob); })
-      .then(dirtMonitor.setClean)
-      .catch(showError);
-}
 
-function doHide() {
-  chrome.app.window.current().hide();
-}
+  function save() {
+    if (!dirtMonitor.isDirty) {
+      console.log('save skipped: not dirty');
+      return Promise.resolve();
+    }
+    var blob = DB.notesAsBlob();
+    return maybeChooseFile()
+        .then(function(fileEntry) { return writeFileEntry(fileEntry, blob); })
+        .then(dirtMonitor.setClean)
+        .catch(showError);
+  }
 
-function doClose() {
-  doSave().then(window.close);
-}
+  // TODO(wdm) Import
+  // .then(loadFileEntry)
+  //          .then(DB.parse)
+
+  return {
+    save: save,
+    onChooseFile: onChooseFile,
+  };
+
+})();
+
+/////////
+// win //
+/////////
+
+var win = (function() {
+  return {
+    hide: function() { chrome.app.window.current().hide(); },
+    close: function() { backup.save().then(window.close); },
+    showFilename: function(file) {
+      s('#filename').textContent = (file && file.name) || '[no bakup file]';
+      return file;
+    },
+  };
+})();
 
 //////////////////
 // Key Handling //
@@ -485,9 +502,9 @@ var keyHandler = (function() {
 
   var global_handlers = {
     27: search.resetSelected,  // Escape.
-    'Alt-1': doHide,
-    'Ctrl-W': doClose,
-    'Ctrl-S': doSave,
+    'Alt-1': win.hide,
+    'Ctrl-W': win.close,
+    'Ctrl-S': backup.save,
   };
 
   var almost_global_handlers = {
@@ -547,21 +564,18 @@ function saveNoteLocal(note) {
   });
 }
 
-function init() {
-  // TODO(wdm) Import
-  // .then(loadFileEntry)
-  //          .then(DB.parse)
+//////////
+// Init //
+//////////
 
-  restoreBackupFile()
-      .then(showFilename)
-      .then(loadLocalNotes)
-      .then(model.init)
-      .then(search.init)
-      .catch(showError);
+function init() {
+  restoreBackupFile().then(win.showFilename);
+
+  loadLocalNotes().then(model.init).then(search.init).catch(showError);
 
   window.addEventListener('keydown', keyHandler);
   s('#editor').addEventListener('input', dirtMonitor.setDirty);
-  s('#chooseFile').addEventListener('click', onChooseFile);
+  s('#chooseFile').addEventListener('click', backup.onChooseFile);
   s('#noteList').addEventListener('click', search.click);
   s('#search').addEventListener('input', search.onInput);
 }
