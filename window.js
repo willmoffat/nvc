@@ -1,6 +1,10 @@
 // UI code.
 "use strict";
 
+///////////
+// Utils //
+///////////
+
 function s(selector, opt_silent) {
   var el = document.querySelector(selector);
   if (!el && !opt_silent) {
@@ -9,15 +13,13 @@ function s(selector, opt_silent) {
   return el;
 }
 
-var textarea = s('textarea');
-var errlog = s('#errlog');
-
 function toArray(nodeList) {
   return Array.prototype.slice.call(nodeList);
 }
 
 function showError(err) {
   console.error(err, err.stack);
+  var errlog = s('#errlog');
   if (!errlog.textContent) {
     errlog.textContent = 'Error: ';
   }
@@ -129,10 +131,11 @@ var search = (function() {
   function storeEdits() {
     if (typeof selected === "number") {
       var old = model.getNote(selected);
-      if (old.text === textarea.value) {
+      var text = editor.getText();
+      if (old.text === text) {
         return;
       }
-      var updatedNote = DB.parseNote(textarea.value, selected);
+      var updatedNote = DB.parseNote(text, selected);
       model.setNote(selected, updatedNote);
       // Update the listed item.
       displayNotes();
@@ -160,9 +163,9 @@ var search = (function() {
       li.scrollIntoViewIfNeeded();
       // Set textarea to current note.
       var focus = false;
-      updateTextArea(model.getNote(selected), focus);
+      editor.setText(model.getNote(selected), focus);
     } else {
-      textarea.value = '';
+      editor.clearText();
     }
   }
 
@@ -273,15 +276,15 @@ var search = (function() {
       // One newline is required to mark end of title. The next newline is
       // optional but looks nicer.
       var rawText = searchEl.value + '\n\n';
-      textarea.value = rawText;  // HACK: required because otherwise storeEdits
-                                 // will wipe out our new note.
+      editor.setText(rawText);  // HACK: required because otherwise storeEdits
+                                // will wipe out our new note.
       var note = model.newNote(rawText);
       index.add(note);
       displayNotes();  // HACK: need to add listitem to ul.
       setSelected(note.id);
     }
     var focus = true;
-    updateTextArea(model.getNote(selected), focus);
+    editor.setText(model.getNote(selected), focus);
   }
 
   function init(notes) {
@@ -379,35 +382,52 @@ var DB = (function() {
 })();
 
 
-//////////////
-// TextArea //
-//////////////
+////////////
+// Editor //
+////////////
 
-function updateTextArea(note, focus) {
-  if (!note) {
-    throw new Error('invalid note', note);
-  }
-  var text = note.text;
-  textarea.value = text;
-  if (focus) {
-    textarea.focus();
-    // Move to first line after title.
-    var pos = note.title.length + 1;
-    if (text[pos] === '\n') {
-      pos++;
+var editor = (function() {
+
+  var textarea = s('#editor');
+
+  function getText() { return textarea.value; }
+
+  function setText(note, focus) {
+    if (!note) {
+      throw new Error('invalid note', note);
     }
-    textarea.setSelectionRange(pos, pos);
-    textarea.scrollTop = 0;
+    var text = note.text;
+    textarea.value = text;
+    if (focus) {
+      textarea.focus();
+      // Move to first line after title.
+      var pos = note.title.length + 1;
+      if (text[pos] === '\n') {
+        pos++;
+      }
+      textarea.setSelectionRange(pos, pos);
+      textarea.scrollTop = 0;
+    }
   }
-}
 
-function setCaret(elem, pos) {
-  var range = elem.createTextRange();
-  range.collapse(true);
-  range.moveEnd('character', pos);
-  range.moveStart('character', pos);
-  range.select();
-}
+  function clearText() { textarea.value = ''; }
+
+  /*
+  function setCaret(elem, pos) {
+    var range = elem.createTextRange();
+    range.collapse(true);
+    range.moveEnd('character', pos);
+    range.moveStart('character', pos);
+    range.select();
+  }
+  */
+
+  return {
+    getText: getText,
+    setText: setText,
+    clearText: clearText,
+  };
+})();
 
 ///////////////
 /// File UI ///
@@ -481,7 +501,7 @@ var keyHandler = (function() {
     var pressed = (e.ctrlKey ? 'Ctrl-' : '') + (e.altKey ? 'Alt-' : '') +
                   (k < 48 ? k : String.fromCharCode(k));
     var handler = global_handlers[pressed];
-    if (!handler && (e.target !== textarea)) {
+    if (!handler && (e.target.id !== 'editor')) {
       handler = almost_global_handlers[pressed];
     }
     if (handler) {
@@ -540,7 +560,7 @@ function init() {
       .catch(showError);
 
   window.addEventListener('keydown', keyHandler);
-  textarea.addEventListener('input', dirtMonitor.setDirty);
+  s('#editor').addEventListener('input', dirtMonitor.setDirty);
   s('#chooseFile').addEventListener('click', onChooseFile);
   s('#noteList').addEventListener('click', search.click);
   s('#search').addEventListener('input', search.onInput);
