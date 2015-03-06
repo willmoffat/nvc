@@ -326,7 +326,7 @@ var model = (function() {
     },
     setNote: function setNote(i, note) {
       notes[i] = note;
-      saveNoteLocal(note);  // TODO(wdm) .then() ?
+      localstore.saveNote(note);  // TODO(wdm) .then() ?
     },
     getNote: function getNote(i) {
       var note = notes[i];
@@ -498,71 +498,70 @@ var win = (function() {
 // Key Handling //
 //////////////////
 
-var keyHandler = (function() {
-
-  var global_handlers = {
-    27: search.resetSelected,  // Escape.
-    'Alt-1': win.hide,
-    'Ctrl-W': win.close,
-    'Ctrl-S': backup.save,
-  };
-
-  var almost_global_handlers = {
-    13: search.selectOrCreateNote,  // Enter.
-    40: search.moveSelectionDown,   // Cursor down.
-    38: search.moveSelectionUp,     // Cursor up.
-  };
-
+function handleKeys(globalHandlers, almostGlobalHandlers) {
   return function keyHandler(e) {
     var k = e.keyCode;
     var pressed = (e.ctrlKey ? 'Ctrl-' : '') + (e.altKey ? 'Alt-' : '') +
                   (k < 48 ? k : String.fromCharCode(k));
-    var handler = global_handlers[pressed];
+    var handler = globalHandlers[pressed];
     if (!handler && (e.target.id !== 'editor')) {
-      handler = almost_global_handlers[pressed];
+      handler = almostGlobalHandlers[pressed];
     }
     if (handler) {
       e.preventDefault();
       handler();
     }
-  }
-})();
+  };
+}
 
-/* Debug: show whole store:
-chrome.storage.local.get(null, function(s) { console.log('store', s) });
-*/
 
-function loadLocalNotes() {
-  return new Promise(function(resolve, reject) {
-    // Load everything in local storage.
-    chrome.storage.local.get(null, function(items) {
-      var notes = [];
-      for (var key in items) {
-        if (key.indexOf('NOTE.') === 0) {
-          var id = parseInt(key.substr(5), 10);
-          var rawText = items[key];
-          var note = DB.parseNote(rawText, id);
-          // Items may not be in order and some ids may be missing.
-          // So we use fill a sparse array rather than using push().
-          notes[id] = note;
-        } else {
-          console.log('loadLocalNotes: ignoring', key);
+////////////////
+// localstore //
+////////////////
+
+var localstore = (function() {
+
+  function loadNotes() {
+    return new Promise(function(resolve, reject) {
+      // Load everything in local storage.
+      chrome.storage.local.get(null, function(items) {
+        var notes = [];
+        for (var key in items) {
+          if (key.indexOf('NOTE.') === 0) {
+            var id = parseInt(key.substr(5), 10);
+            var rawText = items[key];
+            var note = DB.parseNote(rawText, id);
+            // Items may not be in order and some ids may be missing.
+            // So we use fill a sparse array rather than using push().
+            notes[id] = note;
+          } else {
+            console.log('loadNotes: ignoring', key);
+          }
         }
-      }
-      resolve(notes);
+        resolve(notes);
+      });
     });
-  });
-}
+  }
 
-function saveNoteLocal(note) {
-  return new Promise(function(resolve, reject) {
-    var key = 'NOTE.' + note.id;
-    var obj = {};
-    obj[key] = note.text;
+  function saveNote(note) {
+    return new Promise(function(resolve, reject) {
+      var key = 'NOTE.' + note.id;
+      var obj = {};
+      obj[key] = note.text;
 
-    chrome.storage.local.set(obj, function() { resolve(); });
-  });
-}
+      chrome.storage.local.set(obj, function() { resolve(); });
+    });
+  }
+
+  return {
+    loadNotes: loadNotes,
+    saveNote: saveNote,
+    debugAll: function() {
+      chrome.storage.local.get(null, function(s) { console.log('store', s) });
+    },
+  };
+
+})();
 
 //////////
 // Init //
@@ -571,9 +570,23 @@ function saveNoteLocal(note) {
 function init() {
   restoreBackupFile().then(win.showFilename);
 
-  loadLocalNotes().then(model.init).then(search.init).catch(showError);
+  localstore.loadNotes().then(model.init).then(search.init).catch(showError);
 
-  window.addEventListener('keydown', keyHandler);
+  window.addEventListener('keydown', handleKeys(
+      // Global keys:
+      {
+        27: search.resetSelected,  // Escape.
+        'Alt-1': win.hide,
+        'Ctrl-W': win.close,
+        'Ctrl-S': backup.save,
+      },
+      // Global except for inside editor:
+      {
+        13: search.selectOrCreateNote,  // Enter.
+        40: search.moveSelectionDown,   // Cursor down.
+        38: search.moveSelectionUp,     // Cursor up.
+      }));
+
   s('#editor').addEventListener('input', dirtMonitor.setDirty);
   s('#chooseFile').addEventListener('click', backup.onChooseFile);
   s('#noteList').addEventListener('click', search.click);
