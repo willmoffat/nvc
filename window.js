@@ -31,7 +31,7 @@ function showError(err) {
 ///////////////
 
 (function() {
-  var resizeEl = s('#noteList');
+  var resizeEl = s('#searchResults');
 
   function handleMove(e) {
     var w = e.clientX - resizeEl.offsetLeft - 4;
@@ -115,62 +115,80 @@ var highlight = (function() {
 
 var search = (function() {
 
-  var index;
-  var selected = null;
-  var searchEl = s('#search');
+  var searchIndex;              // Lunr index.
+  var selectedEl;               // Currently selected search result element.
+  var searchEl = s('#search');  // Search text input.
 
   function createIndex(notes) {
-    index = lunr(function() {
+    searchIndex = lunr(function() {
       this.field('title', {boost: 10});
       this.field('text');
       this.ref('id');
     });
-    notes.forEach(function(n) { index.add(n); });
+    notes.forEach(function(n) { searchIndex.add(n); });
+  }
+
+  function getNoteId(resultEl) {
+    var id = parseInt(resultEl.dataset.id, 10);
+    // Check for NaN or out of range ids.
+    // TODO(wdm) MAX_NOTE_ID?
+    if (!(id >= 0 && id < 10000)) {
+      throw new Error('invalid id ' + id);
+    }
+    return id;
+  }
+
+  function getSelectedNoteId() {
+    if (!selectedEl) {
+      return null;
+    }
+    return getNoteId(selectedEl);
   }
 
   // Store any edits in the textarea.
   function storeEdits() {
-    if (typeof selected === "number") {
-      var old = model.getNote(selected);
-      var text = editor.getText();
-      if (old.text === text) {
-        return;
-      }
-      var updatedNote = DB.parseNote(text, selected);
-      model.setNote(selected, updatedNote);
-      // Update the listed item.
-      displayNotes();
+    if (!selectedEl) {
+      return;
     }
+    var selectedId = getSelectedNoteId();
+    var old = model.getNote(selectedId);
+    var text = editor.getText();
+    if (old.text === text) {
+      return;
+    }
+    var updatedNote = DB.parseNote(text, selectedId);
+    model.setNote(selected, updatedNote);
+    // Update the listed item.
+    displayNotes();
   }
 
-  function resetSelected() {
+  function clearSearch() {
     searchEl.value = '';
     searchEl.focus();
     onInput();
   }
 
-  function setSelected(i) {
-    if (typeof selected === 'number') {
+  function unselect() {
+    if (selectedEl) {
       storeEdits();
-      var old = s('.selected', true);
-      if (old) {
-        old.classList.remove('selected');
-      }
-    }
-    selected = i;
-    if (typeof selected === 'number') {
-      var li = s('li[data-id="' + i + '"]');
-      li.classList.add('selected');
-      li.scrollIntoViewIfNeeded();
-      // Set textarea to current note.
-      var focus = false;
-      editor.setText(model.getNote(selected), focus);
-    } else {
-      editor.clearText();
+      selectedEl.classList.remove('selected');
     }
   }
 
-  var noteListEl = s('#noteList');
+  function setSelected(id) {
+    unselect();
+    selectedEl = s('li[data-id="' + id + '"]');
+    if (!selectedEl) {
+      throw new Error('could not find search result with id ' + id);
+    }
+    selectedEl.classList.add('selected');
+    selectedEl.scrollIntoViewIfNeeded();
+    // Set textarea to current note.
+    var focus = false;
+    editor.setText(model.getNote(id), focus);
+  }
+
+  var searchResultsEl = s('#searchResults');
 
   // TODO(wdm) modify summary to show highlighted terms?
   function htmlDisplayNote(terms, note) {
@@ -198,12 +216,10 @@ var search = (function() {
   // highlight terms.
   function displayMatches(terms, results) {
     var html;
-    var visibleNotes = {};
 
     if (!results || !results.length) {
       // Display all notes.
       html = model.getNotes().sort(byTitle).map(function(note) {
-        visibleNotes[note.id] = true;
         return htmlDisplayNote(terms, note);
       });
     } else {
@@ -211,18 +227,14 @@ var search = (function() {
       html = results.map(function(r) {
         var id = parseInt(r.ref, 10);
         var note = model.getNote(id);
-        visibleNotes[id] = true;
         return htmlDisplayNote(terms, note);
       });
     }
-    noteList.innerHTML = html.join('\n');
-    if (visibleNotes[selected]) {
-      setSelected(selected);
-    }
+    searchResults.innerHTML = html.join('\n');
   }
 
   function onInput() {
-    setSelected(null);
+    unselect();
     displayNotes();
   }
 
@@ -234,22 +246,26 @@ var search = (function() {
     var terms;
 
     if (q.length) {
-      results = index.search(q);
+      results = searchIndex.search(q);
       terms = q.split(/\s+/);
     }
+    var selectedId = getSelectedNoteId();
     displayMatches(terms, results);
+    if (selectedId) {
+      setSelected(selectedId);
+    }
   }
 
   function moveSelection(isDown) {
     var toSelect;
     var old = s('.selected', true);
     if (!old) {
-      toSelect = noteListEl.firstChild;
+      toSelect = searchResultsEl.firstChild;
     } else {
       toSelect = isDown ? old.nextElementSibling : old.previousElementSibling;
     }
     if (toSelect) {
-      var id = parseInt(toSelect.dataset.id, 10);
+      var id = getNoteId(toSelect);
       setSelected(id);
     }
   }
@@ -268,7 +284,7 @@ var search = (function() {
       console.error('Could not find <li>', e.target, t);
       return;
     }
-    var id = parseInt(t.dataset.id, 10);
+    var id = getNoteId(t);
     setSelected(id);
   }
 
@@ -280,7 +296,7 @@ var search = (function() {
       editor.setText(rawText);  // HACK: required because otherwise storeEdits
                                 // will wipe out our new note.
       var note = model.newNote(rawText);
-      index.add(note);
+      searchIndex.add(note);
       displayNotes();  // HACK: need to add listitem to ul.
       setSelected(note.id);
     }
@@ -299,7 +315,7 @@ var search = (function() {
     selectOrCreateNote: selectOrCreateNote,
     moveSelectionUp: moveSelectionUp,
     moveSelectionDown: moveSelectionDown,
-    resetSelected: resetSelected,
+    clearSearch: clearSearch,
     click: click,
     storeEdits: storeEdits,
     init: init
@@ -474,6 +490,7 @@ var backup = (function() {
 
   return {
     save: save,
+    storeFilename: storeFilename,
     onChooseFile: onChooseFile,
   };
 
@@ -498,14 +515,14 @@ var win = (function() {
 // Key Handling //
 //////////////////
 
-function handleKeys(globalHandlers, almostGlobalHandlers) {
+function handleKeys(handlers) {
   return function keyHandler(e) {
     var k = e.keyCode;
     var pressed = (e.ctrlKey ? 'Ctrl-' : '') + (e.altKey ? 'Alt-' : '') +
                   (k < 48 ? k : String.fromCharCode(k));
-    var handler = globalHandlers[pressed];
+    var handler = handlers.globalKeys[pressed];
     if (!handler && (e.target.id !== 'editor')) {
-      handler = almostGlobalHandlers[pressed];
+      handler = handlers.globalExceptInEditor[pressed];
     }
     if (handler) {
       e.preventDefault();
@@ -568,28 +585,29 @@ var localstore = (function() {
 //////////
 
 function init() {
-  restoreBackupFile().then(win.showFilename);
+  restoreBackupFile().then(backup.storeFilename).then(win.showFilename);
 
   localstore.loadNotes().then(model.init).then(search.init).catch(showError);
 
-  window.addEventListener('keydown', handleKeys(
-      // Global keys:
-      {
-        27: search.resetSelected,  // Escape.
-        'Alt-1': win.hide,
-        'Ctrl-W': win.close,
-        'Ctrl-S': backup.save,
-      },
-      // Global except for inside editor:
-      {
-        13: search.selectOrCreateNote,  // Enter.
-        40: search.moveSelectionDown,   // Cursor down.
-        38: search.moveSelectionUp,     // Cursor up.
-      }));
+  var keyHandlers = {
+    globalKeys: {
+      27: search.clearSearch,  // Escape.
+      'Alt-1': win.hide,
+      'Ctrl-W': win.close,
+      'Ctrl-S': backup.save,
+    },
+    globalExceptInEditor: {
+      13: search.selectOrCreateNote,  // Enter.
+      40: search.moveSelectionDown,   // Cursor down.
+      38: search.moveSelectionUp,     // Cursor up.
+    }
+  };
+
+  window.addEventListener('keydown', handleKeys(keyHandlers));
 
   s('#editor').addEventListener('input', dirtMonitor.setDirty);
   s('#chooseFile').addEventListener('click', backup.onChooseFile);
-  s('#noteList').addEventListener('click', search.click);
+  s('#searchResults').addEventListener('click', search.click);
   s('#search').addEventListener('input', search.onInput);
 }
 
