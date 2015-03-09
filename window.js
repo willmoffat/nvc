@@ -145,6 +145,22 @@ var search = (function() {
     return getNoteId(selectedEl);
   }
 
+
+  function deleteSelectedNote() {
+    var id = getSelectedNoteId();
+    if (!id) {
+      return;
+    }
+    moveSelectionUp();
+    var note = model.getNote(id);
+    searchIndex.remove(note);
+    model.deleteNote(id);
+    dirtMonitor.setDirty();
+    displayNotes();
+    // TODO(wdm) Update the previous view, don't change the rest of the search
+    // results.
+  }
+
   // Store any edits in the textarea.
   function storeEdits() {
     if (!selectedEl) {
@@ -269,10 +285,11 @@ var search = (function() {
     } else {
       toSelect = isDown ? old.nextElementSibling : old.previousElementSibling;
     }
-    if (toSelect) {
-      var id = getNoteId(toSelect);
-      setSelected(id);
+    if (!toSelect) {
+      return;
     }
+    var id = getNoteId(toSelect);
+    setSelected(id);
     var note = model.getNote(id);
     setSearchText(note.title);
   }
@@ -320,6 +337,7 @@ var search = (function() {
   return {
     onInput: onInput,
     selectOrCreateNote: selectOrCreateNote,
+    deleteSelectedNote: deleteSelectedNote,
     moveSelectionUp: moveSelectionUp,
     moveSelectionDown: moveSelectionDown,
     clearSearch: clearSearch,
@@ -336,6 +354,8 @@ var model = (function() {
   // In memory note objects.
   var notes = [];
 
+  function notUndefined(n) { return !!n; }
+
   return {
     init: function init(notes_) {
       notes = notes_;
@@ -351,6 +371,7 @@ var model = (function() {
       notes[i] = note;
       localstore.saveNote(note);  // TODO(wdm) .then() ?
     },
+    deleteNote: function deleteNote(i) { delete notes[i]; },
     getNote: function getNote(i) {
       var note = notes[i];
       if (!note) {
@@ -358,7 +379,7 @@ var model = (function() {
       }
       return notes[i];
     },
-    getNotes: function getNotes() { return notes; }
+    getNotes: function getNotes() { return notes.filter(notUndefined); },
   };
 
 })();
