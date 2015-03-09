@@ -52,16 +52,16 @@ textarea {
 }
 
 
-/* Note list */
-#noteList {
+/* Search Results note list */
+#searchResults {
     list-style: none;
     overflow-x: hidden;
     width: 40%;
     padding-top: 3px;
     padding-left: 3px;
 }
-#noteList::-webkit-scrollbar { 
-    display: none; 
+#searchResults::-webkit-scrollbar {
+    display: none;
 }
 
 li {
