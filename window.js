@@ -256,6 +256,11 @@ var search = (function() {
     }
   }
 
+  function setSearchText(text) {
+    searchEl.value = text;
+    searchEl.setSelectionRange(0, text.length);
+  }
+
   function moveSelection(isDown) {
     var toSelect;
     var old = s('.selected', true);
@@ -268,6 +273,8 @@ var search = (function() {
       var id = getNoteId(toSelect);
       setSelected(id);
     }
+    var note = model.getNote(id);
+    setSearchText(note.title);
   }
 
   function moveSelectionUp() { moveSelection(false); }
@@ -489,7 +496,7 @@ var backup = (function() {
     return restoreBackupFile()
         .then(storeFilename)
         .then(win.showFilename)
-        .then(loadFileEntry) // TODO(wdm) needs namespace.
+        .then(loadFileEntry)  // TODO(wdm) needs namespace.
         .then(DB.parse);
   }
 
