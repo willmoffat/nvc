@@ -63,7 +63,7 @@ var dirtMonitor = (function() {
     if (!isDirty) {
       isDirty = true;
       // TODO(wdm) Do I still want to show if exported file is outdated?
-      // DISABLED: titlebar.classList.add('dirty');
+      titlebar.classList.add('dirty');
     }
   };
   var setClean = function() {
@@ -529,10 +529,25 @@ var win = (function() {
 //////////////////
 
 function handleKeys(handlers) {
+  var keyNames = {
+    8: 'Backspace',
+    13: 'Enter',
+    27: 'Escape',
+    38: 'Up',
+    40: 'Down',
+  };
   return function keyHandler(e) {
     var k = e.keyCode;
-    var pressed = (e.ctrlKey ? 'Ctrl-' : '') + (e.altKey ? 'Alt-' : '') +
-                  (k < 48 ? k : String.fromCharCode(k));
+    var key;
+    if (k > 48) {
+      key = String.fromCharCode(k);
+    } else {
+      key = keyNames[k];
+    }
+    if (!key) {
+      return;
+    }
+    var pressed = (e.ctrlKey ? 'Ctrl-' : '') + (e.altKey ? 'Alt-' : '') + key;
     var handler = handlers.globalKeys[pressed];
     if (!handler && (e.target.id !== 'editor')) {
       handler = handlers.globalExceptInEditor[pressed];
@@ -614,15 +629,16 @@ function init() {
 
   var keyHandlers = {
     globalKeys: {
-      27: search.clearSearch,  // Escape.
+      'Escape': search.clearSearch,
       'Alt-1': win.hide,
       'Ctrl-W': win.close,
       'Ctrl-S': backup.save,
     },
     globalExceptInEditor: {
-      13: search.selectOrCreateNote,  // Enter.
-      40: search.moveSelectionDown,   // Cursor down.
-      38: search.moveSelectionUp,     // Cursor up.
+      'Enter': search.selectOrCreateNote,
+      'Down': search.moveSelectionDown,
+      'Up': search.moveSelectionUp,
+      'Ctrl-Backspace': search.deleteSelectedNote,
     }
   };
 
