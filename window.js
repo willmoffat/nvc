@@ -157,7 +157,7 @@ var search = (function() {
       return;
     }
     var updatedNote = DB.parseNote(text, selectedId);
-    model.setNote(selected, updatedNote);
+    model.setNote(selectedId, updatedNote);
     // Update the listed item.
     displayNotes();
   }
@@ -484,14 +484,20 @@ var backup = (function() {
         .catch(showError);
   }
 
-  // TODO(wdm) Import
-  // .then(loadFileEntry)
-  //          .then(DB.parse)
+  // Can be used a import from file rather than local from localStore.
+  function loadNotes() {
+    return restoreBackupFile()
+        .then(storeFilename)
+        .then(win.showFilename)
+        .then(loadFileEntry) // TODO(wdm) needs namespace.
+        .then(DB.parse);
+  }
 
   return {
     save: save,
-    storeFilename: storeFilename,
+    // storeFilename: storeFilename,
     onChooseFile: onChooseFile,
+    loadNotes: loadNotes,
   };
 
 })();
@@ -565,8 +571,10 @@ var localstore = (function() {
       var key = 'NOTE.' + note.id;
       var obj = {};
       obj[key] = note.text;
-
-      chrome.storage.local.set(obj, function() { resolve(); });
+      if ('HACK') {
+        console.warn('not storing ', key);
+        chrome.storage.local.set(obj, function() { resolve(); });
+      }
     });
   }
 
@@ -585,9 +593,17 @@ var localstore = (function() {
 //////////
 
 function init() {
-  restoreBackupFile().then(backup.storeFilename).then(win.showFilename);
-
-  localstore.loadNotes().then(model.init).then(search.init).catch(showError);
+  // HACK: This should be the import path, not the standard load.
+  var useFileSystem = true;
+  var notesP;
+  if (useFileSystem) {
+    notesP = backup.loadNotes();
+  } else {
+    notesP = localstore.loadNotes();
+    // TODO(wdm) Show the name of the backup file.
+    // restoreBackupFile().then(backup.storeFilename).then(win.showFilename);
+  }
+  notesP.then(model.init).then(search.init).catch(showError);
 
   var keyHandlers = {
     globalKeys: {
