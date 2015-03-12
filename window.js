@@ -579,6 +579,24 @@ function handleKeys(handlers) {
 var localstore = (function() {
 
   // Note(wdm) To wipe whole store: chrome.storage.local.clear();
+  function replaceStoreWith(notes) {}
+
+  function setFileRef(fileRef) {
+    // TODO(wdm) Need error check?
+    chrome.storage.local.set({'APP.BACKUP': fileRef});
+  }
+
+  function getFileRef() {
+    return new Promise(function(resolve, reject) {
+      chrome.storage.local.get('APP.BACKUP', function(items) {
+        var fileRef = items['APP.BACKUP'];
+        if (!fileRef) {
+          console.warn('No APP.BACKUP ref in localstorage');
+        }
+        return resolve(fileRef);
+      });
+    });
+  }
 
   function loadNotes() {
     return new Promise(function(resolve, reject) {
@@ -615,6 +633,8 @@ var localstore = (function() {
   }
 
   return {
+    setFileRef: setFileRef,
+    getFileRef: getFileRef,
     loadNotes: loadNotes,
     saveNote: saveNote,
     debugAll: function() {

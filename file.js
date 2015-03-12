@@ -5,21 +5,16 @@
 
 var file = (function() {
 
-  var FILENAME_KEY = 'APP.BACKUP';
-
   function choose() {
     return new Promise(function(resolve, reject) {
       // TODO(wdm) This doesn't seem to restrict. Do I care?
       var accepts = [{mimeTypes: ['text/*'], extensions: ['txt']}];
-      var cb = function(theEntry) {
-        if (!theEntry) {
+      var cb = function(fileEntry) {
+        if (!fileEntry) {
           return reject(new Error('No file selected.'));
         }
-        // TODO(wdm) Need error check?
-        var obj = {};
-        obj[FILENAME_KEY] = chrome.fileSystem.retainEntry(theEntry);
-        chrome.storage.local.set(obj);
-        resolve(theEntry);
+        localstore.storeFileRef(chrome.fileSystem.retainEntry(fileEntry));
+        resolve(fileEntry);
       };
       chrome.fileSystem.chooseEntry({type: 'openFile', accepts: accepts}, cb);
     });
@@ -36,32 +31,27 @@ var file = (function() {
     });
   }
 
-  // Returns a promise of a file which can be loaded.
-  function restore() {
+  // Convert a fileRef into a real fileEntry.
+  function restoreFileEntry(fileRef) {
     return new Promise(function(resolve, reject) {
-      chrome.storage.local.get(FILENAME_KEY, function(items) {
-        var filename = items[FILENAME_KEY];
-        if (!filename) {
-          console.warn('No', FILENAME_KEY, 'in localstorage');
-          return resolve(null);
+      chrome.fileSystem.isRestorable(fileRef, function(isRestorable) {
+        if (!isRestorable) {
+          // TODO(wdm): When does this happen?
+          return reject(new Error('file is not restorable'));
         }
-
-        chrome.fileSystem.isRestorable(filename, function(isRestorable) {
-          if (!isRestorable) {
-            // TODO(wdm): When does this happen?
-            return reject(new Error('file is not restorable'));
+        console.info("Restoring " + fileRef);
+        chrome.fileSystem.restoreEntry(fileRef, function(fileEntry) {
+          if (!fileEntry) {
+            return reject(new Error('failed to load file'));
           }
-          console.info("Restoring " + filename);
-          chrome.fileSystem.restoreEntry(filename, function(fileEntry) {
-            if (!fileEntry) {
-              return reject(new Error('failed to load file'));
-            }
-            resolve(fileEntry);
-          });
+          resolve(fileEntry);
         });
       });
     });
   }
+
+  // Returns a promise of a file which can be loaded.
+  function restore() { return localstore.getFileRef().then(restoreFileEntry); }
 
   function save(writableEntry, blob) {
     return new Promise(function(resolve, reject) {
