@@ -578,8 +578,23 @@ function handleKeys(handlers) {
 
 var localstore = (function() {
 
-  // Note(wdm) To wipe whole store: chrome.storage.local.clear();
-  function replaceStoreWith(notes) {}
+  // This is for debugging. To replace all notes with backup versions:
+  //   localstore.replaceStoreWith(model.getNotes())
+  function replaceStoreWith(notes) {
+    if (!notes || !notes.length) {
+      throw new Error('invalid notes');
+    }
+
+    return getFileRef().then(function(fileRef) {
+      // Note(wdm) Clears all of local storage!!
+      chrome.storage.local.clear();
+
+      setFileRef(fileRef);
+
+      var savesP = notes.map(saveNote);
+      return Promise.all(savesP).catch(showError);
+    });
+  }
 
   function setFileRef(fileRef) {
     // TODO(wdm) Need error check?
@@ -625,10 +640,7 @@ var localstore = (function() {
       var key = 'NOTE.' + note.id;
       var obj = {};
       obj[key] = note.text;
-      if ('HACK') {
-        console.warn('not storing ', key);
-        chrome.storage.local.set(obj, function() { resolve(); });
-      }
+      chrome.storage.local.set(obj, resolve);
     });
   }
 
@@ -637,6 +649,7 @@ var localstore = (function() {
     getFileRef: getFileRef,
     loadNotes: loadNotes,
     saveNote: saveNote,
+    replaceStoreWith: replaceStoreWith,
     debugAll: function() {
       chrome.storage.local.get(null, function(s) { console.log('store', s) });
     },
@@ -649,8 +662,7 @@ var localstore = (function() {
 //////////
 
 function init() {
-  // HACK: This should be the import path, not the standard load.
-  var useFileSystem = true;
+  var useFileSystem = false;  // TODO(wdm) Needs a sensible switch.
   var notesP;
   if (useFileSystem) {
     notesP = backup.loadNotes();
