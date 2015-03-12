@@ -479,26 +479,8 @@ var editor = (function() {
 //////////////////
 
 var backup = (function() {
-  var fileEntry;
 
-  function maybeChooseFile() {
-    if (fileEntry) {
-      return Promise.resolve(fileEntry);
-    }
-    return onChooseFile();
-  }
-
-  function onChooseFile() {
-    return chooseBackupFile()
-        .then(storeFilename)
-        .then(win.showFilename)
-        .catch(showError);
-  }
-
-  function storeFilename(fileEntry_) {
-    fileEntry = fileEntry_;
-    return fileEntry;
-  }
+  var backupFile = null;
 
   function save() {
     if (!dirtMonitor.isDirty) {
@@ -506,26 +488,36 @@ var backup = (function() {
       return Promise.resolve();
     }
     var blob = DB.notesAsBlob();
-    return maybeChooseFile()
-        .then(function(fileEntry) { return writeFileEntry(fileEntry, blob); })
+    return file.save(backupFile, blob)
         .then(dirtMonitor.setClean)
         .catch(showError);
   }
 
-  // Can be used a import from file rather than local from localStore.
-  function loadNotes() {
-    return restoreBackupFile()
-        .then(storeFilename)
-        .then(win.showFilename)
-        .then(loadFileEntry)  // TODO(wdm) needs namespace.
-        .then(DB.parse);
+  // If file.restore is empty, ask the user to select a notes file.
+  // Show the filename and return a promise of the file.
+  function restore() {
+    var p = file.restore();
+    return p.then(function(fileEntry) {
+      if (!fileEntry) {
+        console.warn('choose a backup file');  // TODO(wdm) Make an alert-like.
+        p = file.choose().catch(showError);
+      }
+      return p.then(function(fileEntry) {
+        win.showFilename(fileEntry);
+        backupFile = fileEntry;
+        return backupFile;
+      });
+    });
   }
+
+  // Load notes from a file rather than local storage.
+  // Returns a promise of a note array.
+  function loadNotes() { return restore().then(file.load).then(DB.parse); }
 
   return {
     save: save,
-    // storeFilename: storeFilename,
-    onChooseFile: onChooseFile,
     loadNotes: loadNotes,
+    restore: restore,
   };
 
 })();
@@ -540,7 +532,6 @@ var win = (function() {
     close: function() { backup.save().then(window.close); },
     showFilename: function(file) {
       s('#filename').textContent = (file && file.name) || '[no bakup file]';
-      return file;
     },
   };
 })();
@@ -586,6 +577,8 @@ function handleKeys(handlers) {
 ////////////////
 
 var localstore = (function() {
+
+  // Note(wdm) To wipe whole store: chrome.storage.local.clear();
 
   function loadNotes() {
     return new Promise(function(resolve, reject) {
@@ -643,8 +636,8 @@ function init() {
     notesP = backup.loadNotes();
   } else {
     notesP = localstore.loadNotes();
-    // TODO(wdm) Show the name of the backup file.
-    // restoreBackupFile().then(backup.storeFilename).then(win.showFilename);
+    // Show the name of the backup file which will be used for saving.
+    backup.restore();
   }
   notesP.then(model.init).then(search.init).catch(showError);
 
@@ -666,7 +659,7 @@ function init() {
   window.addEventListener('keydown', handleKeys(keyHandlers));
 
   s('#editor').addEventListener('input', dirtMonitor.setDirty);
-  s('#chooseFile').addEventListener('click', backup.onChooseFile);
+  // s('#chooseFile').addEventListener('click', backup.onChooseFile);
   s('#searchResults').addEventListener('click', search.click);
   s('#search').addEventListener('input', search.onInput);
 }
