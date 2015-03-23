@@ -4,30 +4,30 @@ var assert = buster.referee.assert;
 // buster.spec.expose(); // Make some functions global
 
 var db = require("../lib/db");
+var tc;
 
-buster.testCase("=>parseNote", {
+tc = {
   "index required": function() {
-    assert.exception(function() {
-      db.parseNote("");
-    });
+    assert.exception(function() { db.parseNote(""); });
   },
   "note cannot be empty": function() {
-    assert.exception(function() {
-      db.parseNote("", 99);
-    });
+    assert.exception(function() { db.parseNote("", 99); });
   },
   "note always has title": function() {
-    assert.equals(db.parseNote("abc", 99), {id:99, title:"abc", text:"abc", summary:""});
+    assert.equals(db.parseNote("abc", 99),
+                  {id: 99, title: "abc", text: "abc", summary: ""});
   },
-});
+};
+buster.testCase("=>parseNote", tc);
 
-buster.testCase("round trip", {
-    "empty list": function () {
-      var notes = [];
-      assert.equals(db.parseFile(db.stringifyNotes(notes)), notes);
-    },
-    "one title": function () {
-      var notes = [{text:'foo'}];
-      assert.equals(db.parseFile(db.stringifyNotes(notes)), notes1);
-    }
-});
+tc = {
+  "empty list": function() {
+    var notes = [];
+    assert.equals(db.parseFile(db.stringifyNotes(notes)), notes);
+  },
+  "one title": function() {
+    var notes = [{text: 'foo'}];
+    assert.equals(db.parseFile(db.stringifyNotes(notes)), notes1);
+  }
+};
+buster.testCase("round trip", tc);
