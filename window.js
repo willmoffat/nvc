@@ -348,6 +348,10 @@ var search = (function() {
 })();
 
 
+///////////
+// Model //
+///////////
+
 // TODO(wdm) Does this actually buy us anything over a global 'notes'?
 var model = (function() {
 
@@ -578,9 +582,7 @@ function handleKeys(handlers) {
 
 var localstore = (function() {
 
-  // This is for debugging. To replace all notes with backup versions:
-  //   localstore.replaceStoreWith(model.getNotes())
-  function replaceStoreWith(notes) {
+  function debugReplaceStoreWith(notes) {
     if (!notes || !notes.length) {
       throw new Error('invalid notes');
     }
@@ -606,7 +608,7 @@ var localstore = (function() {
       chrome.storage.local.get('APP.BACKUP', function(items) {
         var fileRef = items['APP.BACKUP'];
         if (!fileRef) {
-          console.warn('No APP.BACKUP ref in localstorage');
+          console.warn('No APP.BACKUP ref in localstore');
         }
         return resolve(fileRef);
       });
@@ -649,12 +651,37 @@ var localstore = (function() {
     getFileRef: getFileRef,
     loadNotes: loadNotes,
     saveNote: saveNote,
-    replaceStoreWith: replaceStoreWith,
-    debugAll: function() {
-      chrome.storage.local.get(null, function(s) { console.log('store', s) });
-    },
+    debugReplaceStoreWith: debugReplaceStoreWith,
   };
 
+})();
+
+///////////
+// Debug //
+///////////
+var debug = (function() {
+  function showModel() {
+    model.getNotes().forEach(function(note, i) {
+      console.log('===' + i + ':' + note.id + '===\n' + note.text);
+    });
+  }
+
+  function showLocalstore() {
+    chrome.storage.local.get(null, function(items) {
+      for (var k in items) {
+        console.log('===' + k + '===\n' + items[k]);
+      }
+    });
+  }
+  return {
+    showModel: showModel,
+    showLocalstore: showLocalstore,
+    replaceLocalstoreWithFile: function() {
+      backup.loadNotes().then(function(notes) {
+        localstore.debugReplaceStoreWith(notes);
+      });
+    },
+  };
 })();
 
 //////////
@@ -662,7 +689,7 @@ var localstore = (function() {
 //////////
 
 function init() {
-  var useFileSystem = false;  // TODO(wdm) Needs a sensible switch.
+  var useFileSystem = true;  // TODO(wdm) Needs a sensible switch.
   var notesP;
   if (useFileSystem) {
     notesP = backup.loadNotes();
