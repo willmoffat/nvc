@@ -16,6 +16,9 @@ buster.testCase("=>parseNote", {
       db.parseNote("", 99);
     });
   },
+  "note always has title": function() {
+    assert.equals(db.parseNote("abc", 99), {id:99, title:"abc", text:"abc", summary:""});
+  },
 });
 
 buster.testCase("round trip", {
