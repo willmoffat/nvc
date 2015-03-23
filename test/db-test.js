@@ -18,16 +18,16 @@ tc = {
                   {id: 99, title: "abc", text: "abc", summary: ""});
   },
 };
-buster.testCase("=>parseNote", tc);
+buster.testCase("parseNote", tc);
 
 tc = {
-  "empty list": function() {
+  "empty note list forbidden": function() {
     var notes = [];
-    assert.equals(db.parseFile(db.stringifyNotes(notes)), notes);
+    assert.exception(function() { db.stringifyNotes(notes); });
   },
-  "one title": function() {
+  "invalid note caught": function() {
     var notes = [{text: 'foo'}];
-    assert.equals(db.parseFile(db.stringifyNotes(notes)), notes1);
+    assert.exception(function() { db.stringifyNotes(notes); });
   }
 };
-buster.testCase("round trip", tc);
+buster.testCase("stringify", tc);
