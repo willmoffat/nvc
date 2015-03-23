@@ -172,7 +172,7 @@ var search = (function() {
     if (old.text === text) {
       return;
     }
-    var updatedNote = DB.parseNote(text, selectedId);
+    var updatedNote = db.parseNote(text, selectedId);
     model.setNote(selectedId, updatedNote);
     // Update the listed item.
     displayNotes();
@@ -367,7 +367,7 @@ var model = (function() {
     },
     newNote: function(rawText) {
       var id = notes.length;
-      var note = DB.parseNote(rawText, id);
+      var note = db.parseNote(rawText, id);
       notes.push(note);
       return note;
     },
@@ -388,47 +388,6 @@ var model = (function() {
 
 })();
 
-////////
-// DB //
-////////
-
-var DB = (function() {
-
-  // TODO(wdm) Check that SEPERATOR does not appear in notes.
-  var SEPERATOR = '\n[//]: # (NVC: Do not edit this line)\n\n';
-
-  function parse(rawText) {
-    var rawNotes = rawText.split(SEPERATOR);
-    var notes = rawNotes.map(parseNote);
-    return notes;
-  }
-
-  function parseNote(rawNote, i) {
-    if (typeof i !== 'number') {
-      throw new Error('tried to create note without index');
-    }
-    var firstLine = rawNote.indexOf('\n');
-    return {
-      id: i,
-      title: rawNote.substring(0, firstLine),
-      summary: rawNote.substring(firstLine + 1, 150),
-      text: rawNote
-    };
-  }
-
-  // TODO(wdm) Better name!
-  function notesAsBlob() {
-    search.storeEdits();  // Grabs any changes in textarea.
-    var texts = model.getNotes().map(function(note) { return note.text; });
-    var rawText = texts.join(SEPERATOR);
-    return new Blob([rawText], { 'type' : 'text/plain' });
-  }
-  return {
-    parse: parse,
-    parseNote: parseNote,
-    notesAsBlob: notesAsBlob,
-  };
-})();
 
 
 ////////////
@@ -491,7 +450,9 @@ var backup = (function() {
       console.log('save skipped: not dirty');
       return Promise.resolve();
     }
-    var blob = DB.notesAsBlob();
+    search.storeEdits();  // Grabs any changes in textarea.
+    var rawText = db.stringifyNotes(model.getNotes());
+    var blob = new Blob([rawText], { 'type' : 'text/plain' });
     return file.save(backupFile, blob)
         .then(dirtMonitor.setClean)
         .catch(showError);
@@ -516,7 +477,7 @@ var backup = (function() {
 
   // Load notes from a file rather than local storage.
   // Returns a promise of a note array.
-  function loadNotes() { return restore().then(file.load).then(DB.parse); }
+  function loadNotes() { return restore().then(file.load).then(db.parseFile); }
 
   return {
     save: save,
@@ -624,7 +585,7 @@ var localstore = (function() {
           if (key.indexOf('NOTE.') === 0) {
             var id = parseInt(key.substr(5), 10);
             var rawText = items[key];
-            var note = DB.parseNote(rawText, id);
+            var note = db.parseNote(rawText, id);
             // Items may not be in order and some ids may be missing.
             // So we use fill a sparse array rather than using push().
             notes[id] = note;
