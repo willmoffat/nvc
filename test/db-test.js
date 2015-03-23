@@ -26,6 +26,11 @@ tc = {
     assert.equals(db.parseNote("[//]: # (NVC:NOTE.22)\nTITLE\nBODY\n"),
                   {id: 22, title: "TITLE", text: "TITLE\nBODY\n"});
   },
+  // localstore:
+  "note from localstore": function() {
+    assert.equals(db.parseNoteWithoutMetadata("TITLE\nBODY\n", {id: 44}),
+                  {id: 44, title: "TITLE", text: "TITLE\nBODY\n"});
+  },
 };
 buster.testCase("parseNote", tc);
 
@@ -63,8 +68,21 @@ tc = {
     ]);
   },
   "round-trip simple note": function() {
-    var notes = [{id:99, title:'TITLE', text:'TITLE\nBODY\n'}];
+    var notes = [{id: 99, title: 'TITLE', text: 'TITLE\nBODY\n'}];
     assert.equals(db.parseFile(db.stringifyNotes(notes)), notes)
   },
 };
 buster.testCase("stringify", tc);
+
+tc = {
+  "no body": function() {
+    assert.equals(db.summary({text: 'TITLE\n'}, 10), "");
+  },
+  "simple body": function() {
+    assert.equals(db.summary({text: 'TITLE\nBODY\n'}, 10), "BODY\n");
+  },
+  "truncate": function() {
+    assert.equals(db.summary({text: 'TITLE\n1234567890\n'}, 5), "12345");
+  },
+};
+buster.testCase("summary", tc);

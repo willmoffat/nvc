@@ -213,7 +213,7 @@ var search = (function() {
     }
     var ID = note.id;
     var TITLE = highlight(terms, note.title);
-    var SUMMARY = highlight(terms, note.summary);
+    var SUMMARY = highlight(terms, db.summary(note, 100));
     var html = '<li data-id="' + ID + '"><b>' + TITLE + '</b><i>' + SUMMARY +
                '</i></li>';
     return html;
@@ -585,7 +585,7 @@ var localstore = (function() {
           if (key.indexOf('NOTE.') === 0) {
             var id = parseInt(key.substr(5), 10);
             var rawText = items[key];
-            var note = db.parseNote(rawText, id);
+            var note = db.parseNoteWithoutMetadata(rawText, {id: id});
             // Items may not be in order and some ids may be missing.
             // So we use fill a sparse array rather than using push().
             notes[id] = note;
@@ -650,7 +650,7 @@ var debug = (function() {
 //////////
 
 function init() {
-  var useFileSystem = true;  // TODO(wdm) Needs a sensible switch.
+  var useFileSystem = false;  // TODO(wdm) Needs a sensible switch.
   var notesP;
   if (useFileSystem) {
     notesP = backup.loadNotes();
