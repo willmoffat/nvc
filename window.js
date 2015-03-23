@@ -166,13 +166,15 @@ var search = (function() {
     if (!selectedEl) {
       return;
     }
+    // TODO(wdm) Could most of this move into model?
+    // TODO(wdm) Register observers with model?
     var selectedId = getSelectedNoteId();
     var old = model.getNote(selectedId);
     var text = editor.getText();
     if (old.text === text) {
       return;
     }
-    var updatedNote = db.parseNote(text, selectedId);
+    var updatedNote = db.parseNoteWithoutMetadata(text, {id: selectedId});
     model.setNote(selectedId, updatedNote);
     // Update the listed item.
     displayNotes();
@@ -188,6 +190,7 @@ var search = (function() {
     if (selectedEl) {
       storeEdits();
       selectedEl.classList.remove('selected');
+      selectedEl = null;
     }
   }
 
@@ -367,7 +370,7 @@ var model = (function() {
     },
     newNote: function(rawText) {
       var id = notes.length;
-      var note = db.parseNote(rawText, id);
+      var note = db.parseNoteWithoutMetadata(rawText, {id: id});
       notes.push(note);
       return note;
     },
@@ -650,7 +653,7 @@ var debug = (function() {
 //////////
 
 function init() {
-  var useFileSystem = false;  // TODO(wdm) Needs a sensible switch.
+  var useFileSystem = true;  // TODO(wdm) Needs a sensible switch.
   var notesP;
   if (useFileSystem) {
     notesP = backup.loadNotes();
