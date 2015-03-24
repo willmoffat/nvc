@@ -79,39 +79,9 @@ var dirtMonitor = (function() {
   };
 })();
 
-
-
 ////////////
 // Search //
 ////////////
-
-var highlight = (function() {
-  var div = document.createElement('div');
-
-  function safeHtml(text) {
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  function escapeRegExp(str) {
-    return str.replace(/[.^$*+?()[{\\|\]-]/g, '\\$&');
-  }
-
-  // Don't hightlight 1 and 2 char words.
-  // TODO(wdm) Highlight [], #.
-  function keepTerm(term) { return term.length > 2; }
-
-  function highlight(terms, text) {
-    text = safeHtml(text);
-    if (terms && terms.length) {
-      var regexStr = terms.filter(keepTerm).map(escapeRegExp).join('|');
-      var regex = new RegExp(regexStr, 'gi');
-      text = text.replace(regex, '<q>$&</q>');
-    }
-    return text;
-  }
-  return highlight;
-})();
 
 var search = (function() {
 

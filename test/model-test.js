@@ -14,7 +14,10 @@ tc = {
     assert.exception(function() { model.init([{text: 'missing id'}]); });
   },
   "get note fails if note missing": function() {
-    assert.exception(function() { model.getNote(99); });
+    assert.exception(function() {
+      model.init([]);
+      model.getNote(99);
+    });
   },
   "get note succeeds": function() {
     var n = {
