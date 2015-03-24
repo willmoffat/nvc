@@ -164,18 +164,10 @@ var search = (function() {
   // Store any edits in the textarea.
   function storeEdits() {
     if (!selectedEl) {
+      // TODO(wdm) throw?
       return;
     }
-    // TODO(wdm) Could most of this move into model?
-    // TODO(wdm) Register observers with model?
-    var selectedId = getSelectedNoteId();
-    var old = model.getNote(selectedId);
-    var text = editor.getText();
-    if (old.text === text) {
-      return;
-    }
-    var updatedNote = db.parseNoteWithoutMetadata(text, {id: selectedId});
-    model.setNote(selectedId, updatedNote);
+    model.updateNote(getSelectedNoteId(), editor.getText());
     // Update the listed item.
     displayNotes();
   }
@@ -349,13 +341,6 @@ var search = (function() {
     init: init
   };
 })();
-
-
-///////////
-// Model //
-///////////
-
-
 
 
 ////////////
@@ -627,7 +612,13 @@ function init() {
     // Show the name of the backup file which will be used for saving.
     backup.restore();
   }
-  notesP.then(model.init).then(search.init).catch(showError);
+
+  // TODO(wdm) Trigger more events when notes change?
+  var observer = function(note) { localstore.saveNote(updatedNote); };
+
+  notesP.then(function(notes) { return model.init(notes, observer); })
+      .then(search.init)
+      .catch(showError);
 
   var keyHandlers = {
     globalKeys: {
