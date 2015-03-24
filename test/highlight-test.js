@@ -15,6 +15,10 @@ tc = {
     var text = "will";
     assert.equals(highlight([], text), text);
   },
+  "esacpe html": function() {
+    var text="a is < b";
+    assert.equals(highlight([], text), 'a is &lt; b');
+  },
   "simple highlight": function() {
     var text = "will moffat";
     var terms = ["will"];
