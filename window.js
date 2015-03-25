@@ -87,7 +87,7 @@ var search = (function() {
 
   var searchIndex;              // Lunr index.
   var selectedEl;               // Currently selected search result element.
-  var searchEl = s('#search');  // Search text input.
+
 
   function createIndex(notes) {
     searchIndex = lunr(function() {
@@ -317,48 +317,6 @@ var search = (function() {
 // Editor //
 ////////////
 
-var editor = (function() {
-
-  var textarea = s('#editor');
-
-  function getText() { return textarea.value; }
-
-  function setText(note, focus) {
-    if (!note) {
-      throw new Error('invalid note', note);
-    }
-    var text = note.text;
-    textarea.value = text;
-    if (focus) {
-      textarea.focus();
-      // Move to first line after title.
-      var pos = note.title.length + 1;
-      if (text[pos] === '\n') {
-        pos++;
-      }
-      textarea.setSelectionRange(pos, pos);
-      textarea.scrollTop = 0;
-    }
-  }
-
-  function clearText() { textarea.value = ''; }
-
-  /*
-  function setCaret(elem, pos) {
-    var range = elem.createTextRange();
-    range.collapse(true);
-    range.moveEnd('character', pos);
-    range.moveStart('character', pos);
-    range.select();
-  }
-  */
-
-  return {
-    getText: getText,
-    setText: setText,
-    clearText: clearText,
-  };
-})();
 
 //////////////////
 /// File Backup //
@@ -607,10 +565,10 @@ function init() {
 
   window.addEventListener('keydown', handleKeys(keyHandlers));
 
-  s('#editor').addEventListener('input', dirtMonitor.setDirty);
+
   // s('#chooseFile').addEventListener('click', backup.onChooseFile);
   s('#searchResults').addEventListener('click', search.click);
-  s('#search').addEventListener('input', search.onInput);
+
 }
 
 init();
