@@ -34,9 +34,24 @@ tc = {
                    '<li><b>Title test</b><i>Body test\n</i></li>';
     assert.equals(ul.innerHTML, expected);
 
-    noteList.test_select(1);
-    assert.match(ul.children, [{}, {className: 'selected'}])
+    // No previous selection -> select first.
+    noteList.selectNext();
+    assert.match(ul.children, [{className: 'selected'}, {}]);
 
+    noteList.selectNext();
+    assert.match(ul.children, [{}, {className: 'selected'}]);
+
+    // Can't move past end.
+    noteList.selectNext();
+    assert.match(ul.children, [{}, {className: 'selected'}]);
+
+    // And back.
+    noteList.selectPrev();
+    assert.match(ul.children, [{className: 'selected'}, {}]);
+
+    // Can't move past beginning.
+    noteList.selectPrev();
+    assert.match(ul.children, [{className: 'selected'}, {}]);
   },
 };
 buster.testCase("noteList", tc);
