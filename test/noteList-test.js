@@ -21,8 +21,9 @@ buster.testCase("single note with highlighting", tc);
 
 tc = {
   "selection": function() {  // TODO(wdm) stop testing internals.
+    var observer = this.spy();
     var ul = document.createElement('ul');
-    noteList.init(ul);
+    noteList.init(ul, observer);
 
     var notes = [
       {id: 33, title: 'Title', text: 'Title\nFoo\n'},
@@ -37,9 +38,13 @@ tc = {
     // No previous selection -> select first.
     noteList.selectNext();
     assert.match(ul.children, [{className: 'selected'}, {}]);
+    // Check the selection observer.
+    assert.calledWithMatch(observer, {id: 33});
 
     noteList.selectNext();
     assert.match(ul.children, [{}, {className: 'selected'}]);
+    // Check the selection observer.
+    assert.calledWithMatch(observer, {id: 99});
 
     // Can't move past end.
     noteList.selectNext();
