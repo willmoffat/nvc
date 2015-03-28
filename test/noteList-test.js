@@ -2,6 +2,7 @@ var buster = require("buster");
 var assert = buster.referee.assert;
 var document = require('jsdom').jsdom();
 
+var highlight = require("../lib/highlight");
 var noteList = require("../lib/noteList");
 var tc;
 
@@ -13,8 +14,9 @@ tc = {
       text: 'Title test\nBody test\n'
     };
     var terms = ["test"];
+    var regexp = highlight.regexpForHighlight(terms);
     var expected = '<li><b>Title <q>test</q></b><i>Body <q>test</q>\n</i></li>';
-    assert.equals(noteList.test_noteHtml(terms, note), expected);
+    assert.equals(noteList.test_noteHtml(regexp, note), expected);
   },
 };
 buster.testCase("single note with highlighting", tc);

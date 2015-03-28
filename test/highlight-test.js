@@ -5,24 +5,25 @@ var highlight = require("../lib/highlight");
 var tc;
 
 tc = {
-  "terms arg required": function() {
-    assert.exception(function() { highlight(); });
+  "regexp arg required": function() {
+    assert.exception(function() { highlight.text(); });
   },
   "text arg required": function() {
-    assert.exception(function() { highlight([]); });
+    assert.exception(function() { highlight.text(/dummy/); });
   },
   "passthrough text": function() {
     var text = "will";
-    assert.equals(highlight([], text), text);
+    assert.equals(highlight.text(/dummy/, text), text);
   },
   "esacpe html": function() {
-    var text="a is < b";
-    assert.equals(highlight([], text), 'a is &lt; b');
+    var text = "a is < b";
+    assert.equals(highlight.text(/dummy/, text), 'a is &lt; b');
   },
   "simple highlight": function() {
     var text = "will moffat";
     var terms = ["will"];
-    assert.equals(highlight(terms, text), "<q>will</q> moffat");
+    var regexp = highlight.regexpForHighlight(terms);
+    assert.equals(highlight.text(regexp, text), "<q>will</q> moffat");
   },
 };
 buster.testCase("highlight", tc);
