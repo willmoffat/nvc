@@ -58,7 +58,18 @@ tc = {
     assert.equals(app.debug.editorEl.disabled, false);
     assert.contains(app.debug.editorEl.value, '1. Task today');
 
-    // TODO(wdm) Start typing.
+    // type 'task'
+    // -----------
+    app.debug.onSearch('task');
+    // Only notes 1 and 3 are shown.
+    assert.match(
+        app.debug.notelistEl.querySelectorAll('b'),
+        [{textContent: '1. Task today'}, {textContent: '3. Tasks tomorrow'}]);
+    // note 1 remains selected.
+    assert.match(app.debug.notelistEl.querySelectorAll('.selected'),
+                     [{textContent: '1. Task today'}]);
+    // note 1 is shpwn in editor.
+
   },
 };
 buster.testCase("app", tc);
