@@ -22,7 +22,7 @@ tc = {
 buster.testCase("single note with highlighting", tc);
 
 tc = {
-  "selection": function() {  // TODO(wdm) stop testing internals.
+  "selection": function() {
     var observer = this.spy();
     var ul = document.createElement('ul');
     noteList.init(ul, observer);
