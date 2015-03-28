@@ -91,6 +91,21 @@ tc = {
     assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
     // Nothing in editor.
     assert.equals(app.debug.editorEl.disabled, true);
+
+    // Escape
+    // ------
+    app.debug.keyConfig.globalKeys['Escape']();
+    // All notes shown.
+    assert.match(app.debug.notelistEl.querySelectorAll('b'), [
+      {textContent: '1. Task today'},
+      {textContent: '2. Pancake recipe'},
+      {textContent: '3. Tasks tomorrow'}
+    ]);
+    // Nothing selected.
+    assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
+    // Nothing in editor.
+    assert.equals(app.debug.editorEl.disabled, true);
+
   },
 };
 buster.testCase("app", tc);
