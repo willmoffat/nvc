@@ -2,10 +2,7 @@ var buster = require("buster");
 var assert = buster.referee.assert;
 var refute = buster.referee.refute;
 
-
-// TODO(wdm) editor be disabled if no selection.
-
-/* TODO(wdm): how to test this?
+/*
   action  |  list  | selection  | editor
   --------------------------------------
   init        all       -          -
@@ -13,6 +10,8 @@ var refute = buster.referee.refute;
   'task'      1, 3      1          1
   'tasks'     3         -          -
   'tasksZ'    -         -          -
+  TODO(wdm) 'Enter' creates a new note.
+  Escape     all       -           -
 */
 
 
@@ -65,11 +64,33 @@ tc = {
     assert.match(
         app.debug.notelistEl.querySelectorAll('b'),
         [{textContent: '1. Task today'}, {textContent: '3. Tasks tomorrow'}]);
-    // note 1 remains selected.
+    // First note remains selected.
     assert.match(app.debug.notelistEl.querySelectorAll('.selected'),
                      [{textContent: '1. Task today'}]);
-    // note 1 is shpwn in editor.
+    // First note reamins shpwn in editor.
+    assert.equals(app.debug.editorEl.disabled, false);
+    assert.contains(app.debug.editorEl.value, '1. Task today');
 
+    // type 'tasks'
+    // -----------
+    app.debug.onSearch('tasks');
+    // Only note 3 is shown.
+    assert.match(app.debug.notelistEl.querySelectorAll('b'),
+                     [{textContent: '3. Tasks tomorrow'}]);
+    // Now nothing is selected.
+    assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
+    // And now nothing in editor.
+    assert.equals(app.debug.editorEl.disabled, true);
+
+    // type 'tasksZ'
+    // -------------
+    app.debug.onSearch('tasksZ');
+    // No notes shown.
+    assert.match(app.debug.notelistEl.querySelectorAll('b'), []);
+    // Nothing selected.
+    assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
+    // Nothing in editor.
+    assert.equals(app.debug.editorEl.disabled, true);
   },
 };
 buster.testCase("app", tc);
