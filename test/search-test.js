@@ -2,6 +2,8 @@ var buster = require("buster");
 var assert = buster.referee.assert;
 
 var search = require("../lib/search");
+var highlight = require("../lib/highlight");
+
 var tc;
 
 tc = {
@@ -12,16 +14,20 @@ tc = {
   "empty terms returns sorted full list": function() {
     var notes = [{title: 'B'}, {title: 'A'}];
     var want = [{title: 'A'}, {title: 'B'}];
-    assert.match(search([], notes), want);
+    assert.match(search(null, notes), want);
   },
   "search by term": function() {
     var notes = [
       {title: 'B', text: 'hamsters are cool'},
       {title: 'A', text: 'cats are not cool'}
     ];
-    assert.match(search(['hamsters'], notes), [{title: 'B'}]);
-    assert.match(search(['hamsters', 'cool'], notes),
-                 [{title: 'A'}, {title: 'B'}]);
+    var regexp;
+
+    regexp = highlight.regexpForHighlight(['hamsters']);
+    assert.match(search(regexp, notes), [{title: 'B'}]);
+
+    regexp = highlight.regexpForHighlight(['hamsters', 'cool']);
+    assert.match(search(regexp, notes), [{title: 'A'}, {title: 'B'}]);
   },
 };
 
