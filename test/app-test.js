@@ -26,18 +26,39 @@ var testNotes = db.parseFile(
     '[//]: # (NVC:NOTE.44)\n3. Tasks tomorrow\n\nDiet.\n');
 
 tc = {
-  "=>init ok": function() {
+  "select and search": function() {
+
+    // init
+    // ----
     app.init(testNotes);
-
-    // Nothing selected. TODO(wdm) Check
-    assert.equals(app.debug_notelistEl.querySelector('.selected'), null);
-
-    // All notes shown in alphbetical order.
-    assert.match(app.debug_notelistEl.querySelectorAll('b'), [
+    // All notes shown (in alphbetical order).
+    assert.match(app.debug.notelistEl.querySelectorAll('b'), [
       {textContent: '1. Task today'},
       {textContent: '2. Pancake recipe'},
       {textContent: '3. Tasks tomorrow'}
     ]);
+    // Nothing selected.
+    assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
+    // Nothing in editor.
+    assert.equals(app.debug.editorEl.disabled, true);
+
+    // cur_down
+    // --------
+    app.debug.keyConfig.globalExceptInEditor['Down']();
+    // All notes shown (as before).
+    assert.match(app.debug.notelistEl.querySelectorAll('b'), [
+      {textContent: '1. Task today'},
+      {textContent: '2. Pancake recipe'},
+      {textContent: '3. Tasks tomorrow'}
+    ]);
+    // First note selected.
+    assert.match(app.debug.notelistEl.querySelectorAll('.selected'),
+                     [{textContent: '1. Task today'}]);
+    // First note shown in editor.
+    assert.equals(app.debug.editorEl.disabled, false);
+    assert.contains(app.debug.editorEl.value, '1. Task today');
+
+    // TODO(wdm) Start typing.
   },
 };
 buster.testCase("app", tc);
