@@ -29,32 +29,6 @@ function showError(err) {
   errlog.textContent += err + '\n';
 }
 
-///////////////
-// Resizable //
-///////////////
-
-(function() {
-  var resizeEl = s('#noteList');
-
-  function handleMove(e) {
-    var w = e.clientX - resizeEl.offsetLeft - 4;
-    resizeEl.style.width = w + 'px';
-  }
-
-  s('#dragbar')
-      .addEventListener('mousedown', function(e) {
-        document.body.classList.add('resizing');
-        e.preventDefault();
-        document.addEventListener('mousemove', handleMove);
-      });
-
-  document.addEventListener('mouseup', function(e) {
-    document.body.classList.remove('resizing');
-    document.removeEventListener('mousemove', handleMove);
-  });
-})();
-
-
 ///////////
 // Dirty //
 ///////////
