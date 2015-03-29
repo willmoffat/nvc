@@ -219,41 +219,6 @@ var search = (function() {
     searchEl.setSelectionRange(0, text.length);
   }
 
-  function moveSelection(isDown) {
-    var toSelect;
-    var old = s('.selected', true);
-    if (!old) {
-      toSelect = noteListEl.firstChild;
-    } else {
-      toSelect = isDown ? old.nextElementSibling : old.previousElementSibling;
-    }
-    if (!toSelect) {
-      return;
-    }
-    var id = getNoteId(toSelect);
-    setSelected(id);
-    var note = model.getNote(id);
-    setSearchText(note.title);
-  }
-
-  function moveSelectionUp() { moveSelection(false); }
-
-  function moveSelectionDown() { moveSelection(true); }
-
-  function click(e) {
-    var t = e.target;
-    // Find the enclosing <li>.
-    for (var i = 0; t.nodeName !== 'LI' && i < 3; i++) {
-      t = t.parentNode;
-    }
-    if (t.nodeName !== 'LI') {
-      console.error('Could not find <li>', e.target, t);
-      return;
-    }
-    var id = getNoteId(t);
-    setSelected(id);
-  }
-
   function selectOrCreateNote() {
     if (typeof selected !== 'number') {
       // One newline is required to mark end of title. The next newline is
