@@ -1,6 +1,9 @@
-// UI code.
+// Main code. Not testable.
 "use strict";
 
+app.init();
+
+/*
 ///////////
 // Utils //
 ///////////
@@ -522,3 +525,4 @@ function init() {
 }
 
 init();
+*/

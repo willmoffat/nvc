@@ -26,85 +26,86 @@ var testNotes = db.parseFile(
 
 tc = {
   "select and search": function() {
-
+    var notelistEl = app.debug.document.getElementById('noteList');
+    var editorEl = app.debug.document.getElementById('editor');
     // init
     // ----
     app.init(testNotes);
     // All notes shown (in alphbetical order).
-    assert.match(app.debug.notelistEl.querySelectorAll('b'), [
+    assert.match(notelistEl.querySelectorAll('b'), [
       {textContent: '1. Task today'},
       {textContent: '2. Pancake recipe'},
       {textContent: '3. Tasks tomorrow'}
     ]);
     // Nothing selected.
-    assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
+    assert.match(notelistEl.querySelectorAll('.selected'), []);
     // Nothing in editor.
-    assert.equals(app.debug.editorEl.disabled, true);
+    assert.equals(editorEl.disabled, true);
 
     // cur_down
     // --------
     app.debug.keyConfig.globalExceptInEditor['Down']();
     // All notes shown (as before).
-    assert.match(app.debug.notelistEl.querySelectorAll('b'), [
+    assert.match(notelistEl.querySelectorAll('b'), [
       {textContent: '1. Task today'},
       {textContent: '2. Pancake recipe'},
       {textContent: '3. Tasks tomorrow'}
     ]);
     // First note selected.
-    assert.match(app.debug.notelistEl.querySelectorAll('.selected'),
+    assert.match(notelistEl.querySelectorAll('.selected'),
                      [{textContent: '1. Task today'}]);
     // First note shown in editor.
-    assert.equals(app.debug.editorEl.disabled, false);
-    assert.contains(app.debug.editorEl.value, '1. Task today');
+    assert.equals(editorEl.disabled, false);
+    assert.contains(editorEl.value, '1. Task today');
 
     // type 'task'
     // -----------
     app.debug.onSearch('task');
     // Only notes 1 and 3 are shown.
     assert.match(
-        app.debug.notelistEl.querySelectorAll('b'),
+        notelistEl.querySelectorAll('b'),
         [{textContent: '1. Task today'}, {textContent: '3. Tasks tomorrow'}]);
     // First note remains selected.
-    assert.match(app.debug.notelistEl.querySelectorAll('.selected'),
+    assert.match(notelistEl.querySelectorAll('.selected'),
                      [{textContent: '1. Task today'}]);
     // First note reamins shpwn in editor.
-    assert.equals(app.debug.editorEl.disabled, false);
-    assert.contains(app.debug.editorEl.value, '1. Task today');
+    assert.equals(editorEl.disabled, false);
+    assert.contains(editorEl.value, '1. Task today');
 
     // type 'tasks'
     // -----------
     app.debug.onSearch('tasks');
     // Only note 3 is shown.
-    assert.match(app.debug.notelistEl.querySelectorAll('b'),
+    assert.match(notelistEl.querySelectorAll('b'),
                      [{textContent: '3. Tasks tomorrow'}]);
     // Now nothing is selected.
-    assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
+    assert.match(notelistEl.querySelectorAll('.selected'), []);
     // And now nothing in editor.
-    assert.equals(app.debug.editorEl.disabled, true);
+    assert.equals(editorEl.disabled, true);
 
     // type 'tasksZ'
     // -------------
     app.debug.onSearch('tasksZ');
     // No notes shown.
-    assert.match(app.debug.notelistEl.querySelectorAll('b'), []);
+    assert.match(notelistEl.querySelectorAll('b'), []);
     // Nothing selected.
-    assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
+    assert.match(notelistEl.querySelectorAll('.selected'), []);
     // Nothing in editor.
-    assert.equals(app.debug.editorEl.disabled, true);
+    assert.equals(editorEl.disabled, true);
 
     // Escape
     // ------
     app.debug.keyConfig.globalKeys['Escape']();
     // All notes shown.
-    assert.match(app.debug.notelistEl.querySelectorAll('b'), [
+    assert.match(notelistEl.querySelectorAll('b'), [
       {textContent: '1. Task today'},
       {textContent: '2. Pancake recipe'},
       {textContent: '3. Tasks tomorrow'}
     ]);
     // Nothing selected.
-    assert.match(app.debug.notelistEl.querySelectorAll('.selected'), []);
+    assert.match(notelistEl.querySelectorAll('.selected'), []);
     // Nothing in editor.
-    assert.equals(app.debug.editorEl.disabled, true);
+    assert.equals(editorEl.disabled, true);
 
   },
 };
