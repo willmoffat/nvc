@@ -1,6 +1,22 @@
 var buster = require("buster");
 var assert = buster.referee.assert;
 var refute = buster.referee.refute;
+var tc;
+
+var HTML = require('fs').readFileSync(__dirname + '/../window.html',
+                                        {encoding: 'utf8'});
+var JSDOM_OPTS = {
+  features: {FetchExternalResources: []}
+};
+var document = require('jsdom').jsdom(HTML, JSDOM_OPTS);
+
+eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/ui.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/search.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/noteList.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/keys.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/app.js', 'utf8'));
 
 /*
   action  |  list  | selection  | editor
@@ -14,11 +30,6 @@ var refute = buster.referee.refute;
   Escape     all       -           -
 */
 
-
-var db = require("../lib/db");
-var app = require("../lib/app");
-var tc;
-
 var testNotes = db.parseFile(
     '[//]: # (NVC:NOTE.33)\n2. Pancake recipe\n\nEggs milk flour!\n' +
     '[//]: # (NVC:NOTE.22)\n1. Task today\n\nMake pancakes.\n' +
@@ -26,8 +37,8 @@ var testNotes = db.parseFile(
 
 tc = {
   "select and search": function() {
-    var notelistEl = app.debug.document.getElementById('noteList');
-    var editorEl = app.debug.document.getElementById('editor');
+    var notelistEl = document.getElementById('noteList');
+    var editorEl = document.getElementById('editor');
     // init
     // ----
     app.init(testNotes);

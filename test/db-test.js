@@ -1,9 +1,8 @@
-// Node.js tests
 var buster = require("buster");
 var assert = buster.referee.assert;
-// buster.spec.expose(); // Make some functions global
 
-var db = require("../lib/db");
+eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
+
 var tc;
 
 tc = {

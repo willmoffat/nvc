@@ -2,9 +2,11 @@
 var buster = require("buster");
 var assert = buster.referee.assert;
 var refute = buster.referee.refute;
-
-var model = require("../lib/model");
 var tc;
+
+eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/model.js', 'utf8'));
 
 tc = {
   "init with empty list ok": function() {

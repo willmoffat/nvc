@@ -1,8 +1,9 @@
 var buster = require("buster");
 var assert = buster.referee.assert;
-
-var highlight = require("../lib/highlight");
 var tc;
+
+var document = require("jsdom").jsdom();
+eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
 
 tc = {
   "emtpy terms array should give null": function() {
@@ -31,7 +32,7 @@ tc = {
     var text = "will";
     assert.equals(highlight.text(/dummy/, text), text);
   },
-  "esacpe html": function() {
+  "escape html": function() {
     var text = "a is < b";
     assert.equals(highlight.text(/dummy/, text), 'a is &lt; b');
   },

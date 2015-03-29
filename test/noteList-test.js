@@ -1,10 +1,11 @@
 var buster = require("buster");
 var assert = buster.referee.assert;
-var document = require('jsdom').jsdom();
-
-var highlight = require("../lib/highlight");
-var noteList = require("../lib/noteList");
 var tc;
+
+var document = require('jsdom').jsdom();
+eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/noteList.js', 'utf8'));
 
 tc = {
   "simple note with highlight": function() {
