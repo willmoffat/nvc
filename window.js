@@ -31,7 +31,7 @@ function showError(err) {
 ///////////////
 
 (function() {
-  var resizeEl = s('#searchResults');
+  var resizeEl = s('#noteList');
 
   function handleMove(e) {
     var w = e.clientX - resizeEl.offsetLeft - 4;
@@ -169,7 +169,7 @@ var search = (function() {
     editor.setText(model.getNote(id), focus);
   }
 
-  var searchResultsEl = s('#searchResults');
+  var noteListEl = s('#noteList');
 
   // TODO(wdm) modify summary to show highlighted terms?
   function htmlDisplayNote(terms, note) {
@@ -211,7 +211,7 @@ var search = (function() {
         return htmlDisplayNote(terms, note);
       });
     }
-    searchResults.innerHTML = html.join('\n');
+    noteList.innerHTML = html.join('\n');
   }
 
   function onInput() {
@@ -246,7 +246,7 @@ var search = (function() {
     var toSelect;
     var old = s('.selected', true);
     if (!old) {
-      toSelect = searchResultsEl.firstChild;
+      toSelect = noteListEl.firstChild;
     } else {
       toSelect = isDown ? old.nextElementSibling : old.previousElementSibling;
     }
@@ -517,7 +517,7 @@ function init() {
 
 
   // s('#chooseFile').addEventListener('click', backup.onChooseFile);
-  s('#searchResults').addEventListener('click', search.click);
+  s('#noteList').addEventListener('click', search.click);
 
 }
 

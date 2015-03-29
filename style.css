@@ -53,14 +53,14 @@ textarea {
 
 
 /* Search Results note list */
-#searchResults {
+#noteList {
     list-style: none;
     overflow-x: hidden;
     width: 40%;
     padding-top: 3px;
     padding-left: 3px;
 }
-#searchResults::-webkit-scrollbar {
+#noteList::-webkit-scrollbar {
     display: none;
 }
 
