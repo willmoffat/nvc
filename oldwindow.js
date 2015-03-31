@@ -63,18 +63,6 @@ var search = (function() {
     // results.
   }
 
-  // Store any edits in the textarea.
-  function storeEdits() {
-    if (!selectedEl) {
-      // TODO(wdm) throw?
-      return;
-    }
-    model.updateNote(getSelectedNoteId(), editor.getText());
-    // Update the listed item.
-    displayNotes();
-  }
-
-
   function setSearchText(text) {
     searchEl.value = text;
     searchEl.setSelectionRange(0, text.length);
