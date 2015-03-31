@@ -1,11 +1,14 @@
+var browser = require("./browser.js");
 var buster = require("buster");
 var assert = buster.referee.assert;
 var tc;
 
-var document = require('jsdom').jsdom();
-eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/noteList.js', 'utf8'));
+var nvc = browser.evalFiles(
+    ['../lib/db.js', '../lib/highlight.js', '../lib/noteList.js']);
+nvc.document = browser.document();
+var db = nvc.db;
+var highlight = nvc.highlight;
+var noteList = nvc.noteList;
 
 tc = {
   "simple note with highlight": function() {
@@ -25,7 +28,7 @@ buster.testCase("single note with highlighting", tc);
 tc = {
   "selection": function() {
     var observer = this.spy();
-    var ul = document.createElement('ul');
+    var ul = nvc.document.createElement('ul');
     noteList.init(ul, observer);
 
     var notes = [

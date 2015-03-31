@@ -1,9 +1,11 @@
+var browser = require("./browser.js");
 var buster = require("buster");
 var assert = buster.referee.assert;
 var tc;
 
-var document = require("jsdom").jsdom();
-eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
+var nvc = browser.evalFiles(['../lib/highlight.js']);
+nvc.document = browser.document("../window.html");
+var highlight = nvc.highlight;
 
 tc = {
   "emtpy terms array should give null": function() {

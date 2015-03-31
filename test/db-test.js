@@ -1,7 +1,9 @@
+var browser = require('./browser');
 var buster = require("buster");
 var assert = buster.referee.assert;
 
-eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
+var nvc = browser.evalFiles(['../lib/db.js']);
+var db = nvc.db;
 
 var tc;
 

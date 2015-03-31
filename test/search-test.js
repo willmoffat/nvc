@@ -1,9 +1,11 @@
+var browser = require("./browser.js");
 var buster = require("buster");
 var assert = buster.referee.assert;
 var tc;
 
-eval(require('fs').readFileSync('../lib/search.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
+var nvc = browser.evalFiles(['../lib/search.js', '../lib/highlight.js']);
+var search = nvc.search;
+var highlight = nvc.highlight;
 
 tc = {
   "notes and terms required": function() {

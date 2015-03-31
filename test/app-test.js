@@ -1,23 +1,22 @@
+var browser = require("./browser.js");
 var buster = require("buster");
 var assert = buster.referee.assert;
 var refute = buster.referee.refute;
 var tc;
 
-var HTML = require('fs').readFileSync(__dirname + '/../window.html',
-                                        {encoding: 'utf8'});
-var JSDOM_OPTS = {
-  features: {FetchExternalResources: []}
-};
-var document = require('jsdom').jsdom(HTML, JSDOM_OPTS);
-
-eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/model.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/ui.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/search.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/noteList.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/keys.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/app.js', 'utf8'));
+var nvc = browser.evalFiles([
+  '../lib/db.js',
+  '../lib/model.js',
+  '../lib/ui.js',
+  '../lib/highlight.js',
+  '../lib/search.js',
+  '../lib/noteList.js',
+  '../lib/keys.js',
+  '../lib/app.js',
+]);
+nvc.document = browser.document("../window.html");
+var app = nvc.app;
+var db = nvc.db;
 
 /*
   action  |  list  | selection  | editor
@@ -38,8 +37,8 @@ var testNotes = db.parseFile(
 
 tc = {
   "select and search": function() {
-    var notelistEl = document.getElementById('noteList');
-    var editorEl = document.getElementById('editor');
+    var notelistEl = nvc.document.getElementById('noteList');
+    var editorEl = nvc.document.getElementById('editor');
     // init
     // ----
     app.init(testNotes);

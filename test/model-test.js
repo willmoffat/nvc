@@ -1,12 +1,11 @@
-// Node.js tests
+var browser = require("./browser.js");
 var buster = require("buster");
 var assert = buster.referee.assert;
 var refute = buster.referee.refute;
 var tc;
 
-eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
-eval(require('fs').readFileSync('../lib/model.js', 'utf8'));
+var nvc = browser.evalFiles(['../lib/db.js', '../lib/model.js', ]);
+var model = nvc.model;
 
 tc = {
   "init with empty list ok": function() {
@@ -32,8 +31,9 @@ tc = {
   },
   "update note": function() {
     model.init([{id: 99, title: 'TITLE', text: 'TITLE\nBODY\n'}]);
-    model.updateNote(99, 'NEW_TITLE\nBODY\n');
-    assert.equals(model.getNote(99),
+    var note = model.getNote(99);
+    model.updateNote(note, 'NEW_TITLE\nBODY\n');
+    assert.equals(note,
                   {id: 99, title: 'NEW_TITLE', text: 'NEW_TITLE\nBODY\n'});
   },
   "observer called on new note and changed note": function() {
@@ -43,7 +43,7 @@ tc = {
     model.newNote('TITLE\nBODY\n');
     assert.calledWith(observer, {id: 0, title: 'TITLE', text: 'TITLE\nBODY\n'});
 
-    model.updateNote(0, 'NEW\nBODY\n');
+    model.updateNote(model.getNote(0), 'NEW\nBODY\n');
     assert.calledWith(observer, {id: 0, title: 'NEW', text: 'NEW\nBODY\n'});
   },
 
