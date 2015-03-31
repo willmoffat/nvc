@@ -11,6 +11,7 @@ var JSDOM_OPTS = {
 var document = require('jsdom').jsdom(HTML, JSDOM_OPTS);
 
 eval(require('fs').readFileSync('../lib/db.js', 'utf8'));
+eval(require('fs').readFileSync('../lib/model.js', 'utf8'));
 eval(require('fs').readFileSync('../lib/ui.js', 'utf8'));
 eval(require('fs').readFileSync('../lib/highlight.js', 'utf8'));
 eval(require('fs').readFileSync('../lib/search.js', 'utf8'));
